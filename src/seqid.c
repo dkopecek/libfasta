@@ -8,7 +8,7 @@
 static bool wspacep(char *s)
 {
 	while(*s != '\0')
-		if (!isspace(*s))
+		if (!isspace(*s++))
 			return (false);
 	return (true);
 }

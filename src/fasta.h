@@ -13,36 +13,40 @@
 
 #define FASTA_INDEX_EXT "index" /**< filename.fa.index */
 
-#define FASTAREC_SEQID_UNKNOWN   0
-#define FASTAREC_SEQID_GENBANK   1
-#define FASTAREC_SEQID_EMBL      2
-#define FASTAREC_SEQID_DDJB      3
-#define FASTAREC_SEQID_NBRFPIR   4
-#define FASTAREC_SEQID_PRF       5
-#define FASTAREC_SEQID_SWISSPROT 6
-#define FASTAREC_SEQID_PDB1      7
-#define FASTAREC_SEQID_PDB2      8
-#define FASTAREC_SEQID_PATENTS   9
-#define FASTAREC_SEQID_BBS       10
-#define FASTAREC_SEQID_GNL       11
-#define FASTAREC_SEQID_NCBIREF   12
-#define FASTAREC_SEQID_LOCAL     13
+#include "seqid.h"
 
 typedef struct {
-	uint32_t farec_SeqIDfmt; /**< format of SeqID */
+	SeqID_fmt_t seqid_fmt;
+	SeqID       seqid;
+} FASTA_rechdr_t;
 
-	union {
-		char *unknown;
-	} farec_SeqID;
+typedef struct {
+	FASTA_rechdr_t *hdr;     /**< parsed headers */
+	uint32_t        hdr_cnt; /**< number of headers */
 
-	char *farec_sequence;
-} FASTAREC;
+	uint64_t  hdr_start; /**< header file offset */
+	uint32_t  hdr_len;   /**< lenght of the header */
+
+	uint64_t  seq_start; /**< sequence file offset */
+	uint64_t  seq_rawlen;/**< raw sequence length (including '\n', whitespaces, ...) */
+	uint64_t  seq_len;   /**< sequence length */
+	uint32_t  seq_lines; /**< sequence data line count */
+
+	uint32_t  seq_linew; /**< line width */
+	uint32_t  seq_lastw; /**< last line width */
+
+	char     *seq_inmem; /**< in-memory sequence data */
+} FASTA_rec_t;
 
 typedef struct {
 	uint32_t fa_options;
 	char    *fa_path;
+
 	FILE    *fa_seqFP;
 	FILE    *fa_idxFP;
+
+	FASTA_rec_t *fa_record;
+	uint32_t     fa_rcount;
 } FASTA;
 
 #endif /* FASTA_H */
