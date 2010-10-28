@@ -1,7 +1,17 @@
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 #include <assume.h>
+#include "debug.h"
 #include "seqid.h"
+
+static bool wspacep(char *s)
+{
+	while(*s != '\0')
+		if (!isspace(*s))
+			return (false);
+	return (true);
+}
 
 static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
@@ -11,21 +21,31 @@ static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	gi_number = strsep(&buffer, "|");
 
 	if (gi_number != NULL) {
+		_D("gi_number=\"%s\"\n", gi_number);
+
 		gi_number_len = strlen(gi_number);
 		db = strsep(&buffer, "|");
 
 		if (db != NULL) {
+			_D("db=\"%s\"\n", db);
+
 			db_len = strlen(db);
 			accession = strsep(&buffer, "|");
 
 			if (accession != NULL) {
+				_D("accession=\"%s\"\n", accession);
+
 				accession_len = strsep(&buffer, "|");
 				locus = strsep(&buffer, " ");
 
 				if (locus != NULL) {
+					_D("locus=\"%s\"\n", locus);
+
 					locus_len = strlen(locus);
 					rest      = buffer;
 					rest_len  = buffer != NULL ? strlen(buffer) : 0;
+
+					_D("rest=\"%s\"\n", rest);
 
 					if (strcmp("gb", db) == 0) {
 						dst->genbank->gi_number = gi_number;
@@ -74,12 +94,18 @@ static SeqID_fmt_t SeqID_pir_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	empty = strsep(&buffer, "|");
 
 	if (empty != NULL) {
+		_D("empty=\"%s\"\n", empty);
+
 		empty_len = strlen(empty);
 		entry = strsep(&buffer, " ");
 
 		if (entry != NULL) {
+			_D("entry=\"%s\"\n", entry);
+
 			rest      = buffer;
 			rest_len  = buffer != NULL ? strlen(buffer) : 0;
+
+			_D("rest=\"%s\"\n", rest);
 
 			dst->nbrfpir->entry = entry;
 			dst->nbrfpir->rest  = rest;
@@ -101,12 +127,18 @@ static SeqID_fmt_t SeqID_prf_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	empty = strsep(&buffer, "|");
 
 	if (empty != NULL) {
+		_D("empty=\"%s\"\n", empty);
+
 		empty_len = strlen(empty);
 		name = strsep(&buffer, " ");
 
 		if (name != NULL) {
+			_D("name=\"%s\"\n", name);
+
 			rest      = buffer;
 			rest_len  = buffer != NULL ? strlen(buffer) : 0;
+
+			_D("rest=\"%s\"\n", rest);
 
 			dst->prf->name = name;;
 			dst->prf->rest = rest;
@@ -128,13 +160,19 @@ static SeqID_fmt_t SeqID_sp_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	accession = strsep(&buffer, "|");
 
 	if (accession != NULL) {
+		_D("accession=\"%s\"\n", accession);
+
 		accession_len = strlen(accession);
 		name = strsep(&buffer, " ");
 
 		if (name != NULL) {
+			_D("name=\"%s\"\n", name);
+
 			name_len = strlen(name);
 			rest     = buffer;
 			rest_len = buffer != NULL ? strlen(buffer) : 0;
+
+			_D("rest=\"%s\"\n", rest);
 
 			dst->swissprot->accession = accession;
 			dst->swissprot->name      = name;
@@ -157,13 +195,19 @@ static SeqID_fmt_t SeqID_pdb1_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	entry = strsep(&buffer, "|");
 
 	if (entry != NULL) {
+		_D("entry=\"%s\"\n", entry);
+
 		entry_len = strlen(entry);
 		chain = strsep(&buffer, " ");
 
 		if (chain != NULL) {
+			_D("chain=\"%s\"\n", chain);
+
 			chain_len = strlen(chain);
 			rest      = buffer;
 			rest_len  = buffer != NULL ? strlen(buffer) : 0;
+
+			_D("rest=\"%s\"\n", rest);
 
 			dst->pdb1->entry = entry;
 			dst->pdb1->chain = chain;
@@ -186,21 +230,31 @@ static SeqID_fmt_t SeqID_pdb2_parse(char *buffer, size_t buflen, char *ftok, siz
 	entry = strsep(&ftok, ":");
 
 	if (entry != NULL) {
+		_D("entry=\"%s\"\n", entry);
+
 		entry_len = strlen(entry);
 		pdbid = strsep(&buffer, "|");
 
 		if (pdbid != NULL) {
+			_D("pdbid=\"%s\"\n", pdbid);
+
 			pdbid_len = strlen(pdbid);
 			chain = strsep(&buffer, "|");
 
 			if (chain != NULL) {
+				_D("chain=\"%s\"\n", chain);
+
 				chain_len = strlen(chain);
 				sequence = strsep(&buffer, " ");
 
 				if (sequence != NULL) {
+					_D("sequence=\"%s\"\n", sequence);
+
 					sequence_len = strlen(sequence);
 					rest = buffer;
 					rest_len = buffer != NULL ? strlen(buffer) : 0;
+
+					_D("rest=\"%s\"\n", rest);
 
 					dst->pdb2->entry    = entry;
 					dst->pdb2->chain    = chain;
@@ -229,13 +283,19 @@ static SeqID_fmt_t SeqID_pat_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	country = strsep(&buffer, "|");
 
 	if (country != NULL) {
+		_D("country=\"%s\"\n", country);
+
 		country_len = strlen(country);
 		number = strsep(&buffer, " ");
 
 		if (number != NULL) {
+			_D("number=\"%s\"\n", number);
+
 			number_len = strlen(number);
 			rest       = buffer;
 			rest_len   = buffer != NULL ? strlen(buffer) : 0;
+
+			_D("rest=\"%s\"\n", rest);
 
 			dst->patents->country = country;
 			dst->patents->number  = number;
@@ -257,8 +317,12 @@ static SeqID_fmt_t SeqID_bbs_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	number = strsep(&buffer, " ");
 
 	if (number != NULL) {
+		_D("number=\"%s\"\n", number);
+
 		rest = buffer;
 		rest_len = buffer != NULL ? strlen(buffer) : 0;
+
+		_D("rest=\"%s\"\n", rest);
 
 		dst->bbs->number = number;
 		dst->bbs->rest   = rest;
@@ -277,13 +341,19 @@ static SeqID_fmt_t SeqID_gnl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	database = strsep(&buffer, "|");
 
 	if (database != NULL) {
+		_D("database=\"%s\"\n", database);
+
 		database_len = strlen(database);
 		identifier = strsep(&buffer, " ");
 
 		if (identifier != NULL) {
+			_D("identifier=\"%s\"\n", identifier);
+
 			identifier_len = strlen(identifier);
 			rest           = buffer;
 			rest_len       = buffer != NULL ? strlen(buffer) : 0;
+
+			_D("rest=\"%s\"\n", rest);
 
 			dst->gnl->database   = database;
 			dst->gnl->identifier = identifier;
@@ -306,13 +376,19 @@ static SeqID_fmt_t SeqID_ref_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	accession = strsep(&buffer, "|");
 
 	if (accession != NULL) {
+		_D("accession=\"%s\"\n", accession);
+
 		accession_len = strlen(accession);
 		locus = strsep(&buffer, " ");
 
 		if (locus != NULL) {
+			_D("locus=\"%s\"\n", locus);
+
 			locus_len = strlen(locus);
 			rest       = buffer;
 			rest_len   = buffer != NULL ? strlen(buffer) : 0;
+
+			_D("rest=\"%s\"\n", rest);
 
 			dst->ncbiref->accession = accession;
 			dst->ncbiref->locus     = locus;
@@ -334,8 +410,12 @@ static SeqID_fmt_t SeqID_lcl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	identifier = strsep(&buffer, " ");
 
 	if (identifier != NULL) {
+		_D("identifier=\"%s\"\n", identifier);
+
 		rest = buffer;
 		rest_len = buffer != NULL ? strlen(buffer) : 0;
+
+		_D("rest=\"%s\"\n", rest);
 
 		dst->local->identifier = identifier;
 		dst->local->rest       = rest;
@@ -360,56 +440,80 @@ SeqID_fmt_t SeqID_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	btok = strsep(&buffer, "|");
 
 	if (btok != NULL) {
+		_D("btok=\"%s\"\n", btok);
+
 		tlen = strlen(btok);
 
 		switch (btok[0]) {
 		case 'b':
 			/* bbs - GenInfo Backbone Id */
-			fmt = SeqID_bbs_parse(buffer, buflen - tlen, dst);
+			if (tlen >= 3) {
+				if (btok[1] == 'b' && btok[2] == 's' && wspacep(btok + 3))
+					fmt = SeqID_bbs_parse(buffer, buflen - tlen, dst);
+			}
 			break;
 		case 'g':
 			switch (btok[1]) {
 			case 'i':
 				/* gi  - (GenBank|EMBL|DDJB) */
-				fmt = SeqID_gi_parse(buffer, buflen - tlen, dst);
+				if (wspacep(btok + 2))
+					fmt = SeqID_gi_parse(buffer, buflen - tlen, dst);
 				break;
 			case 'n':
 				/* gnl - General database identifier */
-				fmt = SeqID_gnl_parse(buffer, buflen - tlen, dst);
+				if (tlen >= 3) {
+					if (btok[2] == 'l' && wspacep(btok + 3))
+						fmt = SeqID_gnl_parse(buffer, buflen - tlen, dst);
+				}
 				break;
 			}
 			break;
 		case 'l':
 			/* lcl - Local sequence identifier */
-			fmt = SeqID_lcl_parse(buffer, buflen - tlen, dst);
+			if (tlen >= 3) {
+				if (btok[1] == 'c' && btok[2] == 'l' && wspacep(btok + 3))
+					fmt = SeqID_lcl_parse(buffer, buflen - tlen, dst);
+			}
 			break;
 		case 'p':
-			switch (btok[1]) {
-			case 'd':
-				/* pdb - Brookhaven Protein Data bank */
-				fmt = SeqID_pdb1_parse(buffer, buflen - tlen, dst);
-				break;
-			case 'a':
-				/* pat - Patents */
-				fmt = SeqID_pat_parse(buffer, buflen - tlen, dst);
-				break;
-			case 'i':
-				/* pir - NBRF PIR */
-				fmt = SeqID_pir_parse(buffer, buflen - tlen, dst);
-				break;
-			case 'r':
-				/* prf - Protein Research Foundation */
-				fmt = SeqID_prf_parse(buffer, buflen - tlen, dst);
-				break;
+			if (tlen >= 3) {
+				switch (btok[1]) {
+				case 'd':
+					/* pdb - Brookhaven Protein Data bank */
+					if (btok[2] == 'b' && wspacep(btok + 3))
+						fmt = SeqID_pdb1_parse(buffer, buflen - tlen, dst);
+					break;
+				case 'a':
+					/* pat - Patents */
+					if (btok[2] == 't' && wspacep(btok + 3))
+						fmt = SeqID_pat_parse(buffer, buflen - tlen, dst);
+					break;
+				case 'i':
+					/* pir - NBRF PIR */
+					if (btok[2] == 'r' && wspacep(btok + 3))
+						fmt = SeqID_pir_parse(buffer, buflen - tlen, dst);
+					break;
+				case 'r':
+					/* prf - Protein Research Foundation */
+					if (btok[2] == 'f' && wspacep(btok + 3))
+						fmt = SeqID_prf_parse(buffer, buflen - tlen, dst);
+					break;
+				}
 			}
 			break;
 		case 'r':
 			/* ref - NCBI reference sequence */
-			fmt = SeqID_ref_parse(buffer, buflen - tlen, dst);
+			if (tlen >= 3) {
+				if (btok[1] == 'e' && btok[2] == 'f' && wspacep(btok + 3))
+					fmt = SeqID_ref_parse(buffer, buflen - tlen, dst);
+			}
 			break;
 		case 's':
 			/* sp - SWISS-PROT */
-			fmt = SeqID_sp_parse(buffer, buflen - tlen, dst);
+			if (tlen >= 2) {
+				if (btok[1] == 'p' && wspacep(btok + 2))
+					fmt = SeqID_sp_parse(buffer, buflen - tlen, dst);
+			}
 			break;
 		default:
 			if (strchr(btok, ':') != NULL) {
