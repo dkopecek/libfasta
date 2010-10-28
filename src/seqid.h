@@ -9,7 +9,7 @@ typedef enum {
 	SEQID_UNKNOWN,
 	SEQID_GENBANK,
 	SEQID_EMBL,
-	SEQID_DDJB,
+	SEQID_DDBJ,
 	SEQID_NBRFPIR,
 	SEQID_PRF,
 	SEQID_SWISSPROT,
@@ -41,7 +41,7 @@ typedef struct {
 	char *accession;
 	char *locus;
 	char *rest;
-} SeqID_ddjb_t;
+} SeqID_ddbj_t;
 
 typedef struct {
 	char *entry;
@@ -105,7 +105,7 @@ typedef union {
 	char             *unknown;
 	SeqID_genbank_t   genbank;
 	SeqID_embl_t      embl;
-	SeqID_ddjb_t      ddjb;
+	SeqID_ddbj_t      ddbj;
 	SeqID_nbrfpir_t   nbrfpir;
 	SeqID_prf_t       prf;
 	SeqID_swissprot_t swissprot;
