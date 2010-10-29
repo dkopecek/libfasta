@@ -1,3 +1,6 @@
+#include <ctype.h>
+#include <stdbool.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdint.h>
@@ -35,33 +38,15 @@ static bool issequence(int ch)
 	case '-':
 		/* nucleic acid */
 		return (true);
-	case 'A':
-	case 'B':
-	case 'C':
-	case 'D':
 	case 'E':
 	case 'F':
-	case 'G':
-	case 'H':
 	case 'I':
-	case 'K':
 	case 'L':
-	case 'M':
-	case 'N':
 	case 'O':
 	case 'P':
 	case 'Q':
-	case 'R':
-	case 'S':
-	case 'T':
-	case 'U':
-	case 'V':
-	case 'W':
-	case 'Y':
 	case 'Z':
-	case 'X':
 	case '*':
-	case '-':
 		/* amino acid */
 		return (true);
 	}
@@ -71,10 +56,11 @@ static bool issequence(int ch)
 
 static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options)
 {
-	int      ret;
 	int      ch;
 	char    *buffer;
 	uint32_t buflen;
+	char    *buftok;
+	uint32_t toklen;
 
 	uint32_t plinew; /* previous line width */
 	uint32_t clinew; /* current line width */
@@ -130,7 +116,7 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options)
 
 		i = 0;
 
-		while ((buftok = strsep(&buffer, 0x01)) != NULL) {
+		while ((buftok = strsep(&buffer, "\x01")) != NULL) {
 			/*
 			 * Sanity check
 			 */
@@ -350,9 +336,9 @@ FASTA *fasta_open(const char *path, uint32_t options)
 
 				fa->fa_record = sm_realloc(fa->fa_record, sizeof(FASTA_rec_t) * fa->fa_rcount);
 			}
-		} while ((ret = __fasta_read0(fa->fa_seqFP, fa->fa_record + i++, options)) == 0);
+		} while ((r = __fasta_read0(fa->fa_seqFP, fa->fa_record + i++, options)) == 0);
 
-		if (ret < 0) {
+		if (r < 0) {
 			_D("An error ocured while reading the file \"%s\"\n", fa->fa_path);
 			goto fail;
 		}
@@ -364,7 +350,7 @@ FASTA *fasta_open(const char *path, uint32_t options)
 	return (fa);
 fail:
 	for (; fa->fa_rcount > 0; --fa->fa_rcount)
-		fasta_rec_free(fa->ra_record[fa->fa_rcount - 1]);
+		fasta_rec_free(fa->fa_record + fa->fa_rcount - 1);
 
 	sm_free(fa);
 
@@ -406,9 +392,9 @@ off_t fasta_tello(FASTA *fa)
 	return (-1);
 }
 
-void *fasta_apply(FASTA *fa, (void *)(*func)(FASTA_rec_t *, void *), uint32_t options, void *funcarg)
+void *fasta_apply(FASTA *fa, void * (*func)(FASTA_rec_t *, void *), uint32_t options, void *funcarg)
 {
-	return (-1);
+	return (NULL);
 }
 
 void fasta_close(FASTA *fa)

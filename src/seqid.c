@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
 #include <ctype.h>
@@ -35,7 +36,7 @@ static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 			if (accession != NULL) {
 				_D("accession=\"%s\"\n", accession);
 
-				accession_len = strsep(&buffer, "|");
+				accession_len = strlen(accession);
 				locus = strsep(&buffer, " ");
 
 				if (locus != NULL) {
@@ -48,28 +49,28 @@ static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 					_D("rest=\"%s\"\n", rest);
 
 					if (strcmp("gb", db) == 0) {
-						dst->genbank->gi_number = gi_number;
-						dst->genbank->accession = accession;
-						dst->genbank->locus     = locus;
-						dst->genbank->rest      = rest;
+						dst->genbank.gi_number = gi_number;
+						dst->genbank.accession = accession;
+						dst->genbank.locus     = locus;
+						dst->genbank.rest      = rest;
 
 						return (SEQID_GENBANK);
 					}
 
 					if (strcmp("emb", db) == 0) {
-						dst->embl->gi_number = gi_number;
-						dst->embl->accession = accession;
-						dst->embl->locus     = locus;
-						dst->embl->rest      = rest;
+						dst->embl.gi_number = gi_number;
+						dst->embl.accession = accession;
+						dst->embl.locus     = locus;
+						dst->embl.rest      = rest;
 
 						return (SEQID_EMBL);
 					}
 
 					if (strcmp("dbj", db) == 0) {
-						dst->ddbj->gi_number = gi_number;
-						dst->ddbj->accession = accession;
-						dst->ddbj->locus     = locus;
-						dst->ddbj->rest      = rest;
+						dst->ddbj.gi_number = gi_number;
+						dst->ddbj.accession = accession;
+						dst->ddbj.locus     = locus;
+						dst->ddbj.rest      = rest;
 
 						return (SEQID_DDBJ);
 					}
@@ -107,8 +108,8 @@ static SeqID_fmt_t SeqID_pir_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 			_D("rest=\"%s\"\n", rest);
 
-			dst->nbrfpir->entry = entry;
-			dst->nbrfpir->rest  = rest;
+			dst->nbrfpir.entry = entry;
+			dst->nbrfpir.rest  = rest;
 
 			return (SEQID_NBRFPIR);
 		}
@@ -140,8 +141,8 @@ static SeqID_fmt_t SeqID_prf_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 			_D("rest=\"%s\"\n", rest);
 
-			dst->prf->name = name;;
-			dst->prf->rest = rest;
+			dst->prf.name = name;;
+			dst->prf.rest = rest;
 
 			return (SEQID_PRF);
 		}
@@ -174,9 +175,9 @@ static SeqID_fmt_t SeqID_sp_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 			_D("rest=\"%s\"\n", rest);
 
-			dst->swissprot->accession = accession;
-			dst->swissprot->name      = name;
-			dst->swissprot->rest      = rest;
+			dst->swissprot.accession = accession;
+			dst->swissprot.name      = name;
+			dst->swissprot.rest      = rest;
 
 			return (SEQID_SWISSPROT);
 		}
@@ -189,8 +190,8 @@ static SeqID_fmt_t SeqID_sp_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 static SeqID_fmt_t SeqID_pdb1_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
-	char *entry, *chain;
-	size_t entry_len, chain_len;
+	char *entry, *chain, *rest;
+	size_t entry_len, chain_len, rest_len;
 
 	entry = strsep(&buffer, "|");
 
@@ -209,9 +210,9 @@ static SeqID_fmt_t SeqID_pdb1_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 			_D("rest=\"%s\"\n", rest);
 
-			dst->pdb1->entry = entry;
-			dst->pdb1->chain = chain;
-			dst->pdb1->rest  = rest;
+			dst->pdb1.entry = entry;
+			dst->pdb1.chain = chain;
+			dst->pdb1.rest  = rest;
 
 			return (SEQID_PDB1);
 		}
@@ -256,11 +257,11 @@ static SeqID_fmt_t SeqID_pdb2_parse(char *buffer, size_t buflen, char *ftok, siz
 
 					_D("rest=\"%s\"\n", rest);
 
-					dst->pdb2->entry    = entry;
-					dst->pdb2->chain    = chain;
-					dst->pdb2->pdbid    = pdbid;
-					dst->pdb2->sequence = sequence;
-					dst->pdb2->rest     = rest;
+					dst->pdb2.entry    = entry;
+					dst->pdb2.chain    = chain;
+					dst->pdb2.pdbid    = pdbid;
+					dst->pdb2.sequence = sequence;
+					dst->pdb2.rest     = rest;
 
 					return (SEQID_PDB2);
 				}
@@ -277,8 +278,8 @@ static SeqID_fmt_t SeqID_pdb2_parse(char *buffer, size_t buflen, char *ftok, siz
 
 static SeqID_fmt_t SeqID_pat_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
-	char *country, *number;
-	size_t country_len, number_len;
+	char *country, *number, *rest;
+	size_t country_len, number_len, rest_len;
 
 	country = strsep(&buffer, "|");
 
@@ -297,9 +298,9 @@ static SeqID_fmt_t SeqID_pat_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 			_D("rest=\"%s\"\n", rest);
 
-			dst->patents->country = country;
-			dst->patents->number  = number;
-			dst->patents->rest    = rest;
+			dst->patents.country = country;
+			dst->patents.number  = number;
+			dst->patents.rest    = rest;
 
 			return (SEQID_PATENTS);
 		}
@@ -313,6 +314,7 @@ static SeqID_fmt_t SeqID_pat_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_bbs_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *number, *rest;
+	size_t number_len, rest_len;
 
 	number = strsep(&buffer, " ");
 
@@ -324,8 +326,8 @@ static SeqID_fmt_t SeqID_bbs_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 		_D("rest=\"%s\"\n", rest);
 
-		dst->bbs->number = number;
-		dst->bbs->rest   = rest;
+		dst->bbs.number = number;
+		dst->bbs.rest   = rest;
 
 		return (SEQID_BBS);
 	}
@@ -335,8 +337,8 @@ static SeqID_fmt_t SeqID_bbs_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 static SeqID_fmt_t SeqID_gnl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
-	char *database, *identifier;
-	size_t database_len, identifier_len;
+	char *database, *identifier, *rest;
+	size_t database_len, identifier_len, rest_len;
 
 	database = strsep(&buffer, "|");
 
@@ -355,9 +357,9 @@ static SeqID_fmt_t SeqID_gnl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 			_D("rest=\"%s\"\n", rest);
 
-			dst->gnl->database   = database;
-			dst->gnl->identifier = identifier;
-			dst->gnl->rest       = rest;
+			dst->gnl.database   = database;
+			dst->gnl.identifier = identifier;
+			dst->gnl.rest       = rest;
 
 			return (SEQID_GNL);
 		}
@@ -370,8 +372,8 @@ static SeqID_fmt_t SeqID_gnl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 static SeqID_fmt_t SeqID_ref_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
-	char *accession, *locus;
-	size_t accession_len, locus_len;
+	char *accession, *locus, *rest;
+	size_t accession_len, locus_len, rest_len;
 
 	accession = strsep(&buffer, "|");
 
@@ -390,9 +392,9 @@ static SeqID_fmt_t SeqID_ref_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 			_D("rest=\"%s\"\n", rest);
 
-			dst->ncbiref->accession = accession;
-			dst->ncbiref->locus     = locus;
-			dst->ncbiref->rest      = rest;
+			dst->ncbiref.accession = accession;
+			dst->ncbiref.locus     = locus;
+			dst->ncbiref.rest      = rest;
 
 			return (SEQID_NCBIREF);
 		}
@@ -406,6 +408,7 @@ static SeqID_fmt_t SeqID_ref_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_lcl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *identifier, *rest;
+	size_t identifier_len, rest_len;
 
 	identifier = strsep(&buffer, " ");
 
@@ -417,8 +420,8 @@ static SeqID_fmt_t SeqID_lcl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 
 		_D("rest=\"%s\"\n", rest);
 
-		dst->local->identifier = identifier;
-		dst->local->rest       = rest;
+		dst->local.identifier = identifier;
+		dst->local.rest       = rest;
 
 		return (SEQID_LOCAL);
 	}

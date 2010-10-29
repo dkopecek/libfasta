@@ -20,10 +20,10 @@
 
 typedef struct {
 	SeqID_fmt_t seqid_fmt;
-	SeqID       seqid;
+	SeqID_t     seqid;
 } FASTA_rechdr_t;
 
-#define FASTA_REC_MAGIGFL 0xf0fa0000
+#define FASTA_REC_MAGICFL 0xf0fa0000
 #define FASTA_REC_FREESEQ 0x00000001 /**< Allowed to free the sequence memory */
 #define FASTA_REC_FREEHDR 0x00000002 /**< Allowed to free the headers */
 #define FASTA_REC_FREEREC 0x00000004 /**< Allowed to free the memory holding the FASTA record (FASTA_rec_t *) */
@@ -59,5 +59,16 @@ typedef struct {
 	FASTA_rec_t *fa_record;
 	uint32_t     fa_rcount;
 } FASTA;
+
+FASTA *fasta_open(const char *path, uint32_t options);
+uint32_t fasta_count(FASTA *fa);
+FASTA_rec_t *fasta_read(FASTA *fa);
+int fasta_write(FASTA *fa, FASTA_rec_t *farec);
+void fasta_rec_free(FASTA_rec_t *farec);
+int fasta_rewind(FASTA *fa);
+int fasta_seeko(FASTA *fa, off_t off, int whence);
+off_t fasta_tello(FASTA *fa);
+void *fasta_apply(FASTA *fa, void * (*func)(FASTA_rec_t *, void *), uint32_t options, void *funcarg);
+void fasta_close(FASTA *fa);
 
 #endif /* FASTA_H */
