@@ -1,6 +1,8 @@
 #ifndef FASTA_H
 #define FASTA_H
 
+#include <stdint.h>
+
 #define FASTA_KEEPOPEN      0x00000001 /**< Keep the FASTA file/index open */
 #define FASTA_USEINDEX      0x00000002 /**< Use index, if present */
 #define FASTA_GENINDEX      0x00000004 /**< Create the index, if not present */

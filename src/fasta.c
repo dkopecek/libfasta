@@ -108,6 +108,10 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options)
 		buffer = sm_realloc(buffer, sizeof(char) * (dst->hdr_len + 1));
 		dst->hdr_mem = buffer;
 
+
+		_D(" Read header: \"%s\"\n", buffer);
+		_D("Header count: %u\n", dst->hdr_cnt);
+
 		/*
 		 * Parse headers
 		 */
@@ -128,7 +132,7 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options)
 			/*
 			 * Parse the header using the SeqID parser
 			 */
-			if ((dst->hdr[i].seqid_fmt = SeqID_parse(buftok, toklen,
+			if ((dst->hdr[i].seqid_fmt = SeqID_parse(buftok, strlen(buftok),
 								 &dst->hdr[i].seqid)) == SEQID_ERROR)
 			{
 				_D("SeqID returned an error: h=\"%s\" l=%zu\n", buftok, toklen);
@@ -237,14 +241,13 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options)
 					}
 				}
 			}
-
-		finalize_seq:
-			dst->seq_linew = plinew;
-			dst->seq_lastw = clinew;
 		}
 	}
 
-	dst->flags |= FASTA_REC_MAGICFL;
+finalize_seq:
+	dst->seq_linew = plinew;
+	dst->seq_lastw = clinew;
+	dst->flags    |= FASTA_REC_MAGICFL;
 
 	/*
 	 * ret=0 - complete
@@ -329,13 +332,21 @@ FASTA *fasta_open(const char *path, uint32_t options)
 
 		do {
 			if (i >= fa->fa_rcount) {
-				if (i < 65535)
+				_D("=> pre-alloc: fa_rcount=%u\n", fa->fa_rcount);
+
+				if (i == 0)
+					fa->fa_rcount = 8;
+				else if (i < 65535)
 					fa->fa_rcount <<= 1;
 				else
 					fa->fa_rcount += 1024;
 
 				fa->fa_record = sm_realloc(fa->fa_record, sizeof(FASTA_rec_t) * fa->fa_rcount);
+
+				_D("<= pre-alloc: fa_rcount=%u\n", fa->fa_rcount);
 			}
+
+			_D("Reading sequence #%u\n", i);
 		} while ((r = __fasta_read0(fa->fa_seqFP, fa->fa_record + i++, options)) == 0);
 
 		if (r < 0) {
@@ -359,7 +370,7 @@ fail:
 
 uint32_t fasta_count(FASTA *fa)
 {
-	return (0);
+	return (fa->fa_rcount);
 }
 
 FASTA_rec_t *fasta_read(FASTA *fa)

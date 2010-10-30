@@ -75,6 +75,17 @@ static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 						return (SEQID_DDBJ);
 					}
 
+					/* XXX: what is |ref| ?
+					if (strcmp("ref", db) == 0) {
+						dst->ddbj.gi_number = gi_number;
+						dst->ddbj.accession = accession;
+						dst->ddbj.locus     = locus;
+						dst->ddbj.rest      = rest;
+
+						return (SEQID_DDBJ);
+					}
+					*/
+
 					locus[locus_len] = ' ';
 				}
 				accession[accession_len] = '|';
