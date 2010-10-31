@@ -19,6 +19,7 @@ AC_PROG_LN_S
 AC_PROG_LIBTOOL
 
 CFLAGS="$CFLAGS -O0 -g -fno-inline-functions -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused"
+#fCFLAGS="$CFLAGS -O2 -DNDEBUG -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused"
 
 # Checks for libraries.
 
