@@ -15,10 +15,13 @@
 #define FASTA_PARALLEL      0x00000100 /**< Perform some operation in parallel, e.g. the _apply operation */
 #define FASTA_READ          0x00000200 /**< Open for reading */
 #define FASTA_WRITE         0x00000400 /**< Open for writing */
+#define FASTA_RAWREC        0x00000800 /**< Return a pointer to an internally allocated FASTA record */
+#define FASTA_CSTRSEQ       0x00001000 /**< Return the sequence as a C string (i.e. NUL terminated) */
 
 #define FASTA_INDEX_EXT "index" /**< filename.fa.index */
 
 #include "seqid.h"
+#include "trans.h"
 
 typedef struct {
 	SeqID_fmt_t seqid_fmt;
@@ -58,13 +61,16 @@ typedef struct {
 	FILE    *fa_seqFP;
 	FILE    *fa_idxFP;
 
+	atrans_t *fa_atr;
+
 	FASTA_rec_t *fa_record;
+	uint32_t     fa_rindex;
 	uint32_t     fa_rcount;
 } FASTA;
 
-FASTA *fasta_open(const char *path, uint32_t options);
+FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr);
 uint32_t fasta_count(FASTA *fa);
-FASTA_rec_t *fasta_read(FASTA *fa);
+FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *atr);
 int fasta_write(FASTA *fa, FASTA_rec_t *farec);
 void fasta_rec_free(FASTA_rec_t *farec);
 int fasta_rewind(FASTA *fa);
