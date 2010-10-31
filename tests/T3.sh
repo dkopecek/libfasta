@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for file in data/*.fa; do
+for file in ${srcdir}/data/*.fa; do
     ./T3_noidx_trans "${file}"
 
     if [ $? -ne 0 ]; then

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for file in data/*.fa; do
+for file in ${srcdir}/data/*.fa; do
     ./T2_noidx_read "${file}"
 
     if [ $? -ne 0 ]; then
