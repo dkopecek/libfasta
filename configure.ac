@@ -40,6 +40,7 @@ AC_FUNC_REALLOC
 AC_CHECK_FUNCS([atexit strchr strdup strerror])
 
 AC_CONFIG_FILES([Makefile
-		 src/Makefile])
+		 src/Makefile
+		 tests/Makefile])
 
 AC_OUTPUT
