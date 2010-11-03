@@ -23,86 +23,109 @@ typedef enum {
 } SeqID_fmt_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *gi_number;
 	char *accession;
 	char *locus;
-	char *rest;
 } SeqID_genbank_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *gi_number;
 	char *accession;
 	char *locus;
-	char *rest;
 } SeqID_embl_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *gi_number;
 	char *accession;
 	char *locus;
-	char *rest;
 } SeqID_ddbj_t;
 
 typedef struct {
-	char *entry;
+	char *id;
 	char *rest;
+	char *entry;
 } SeqID_nbrfpir_t;
 
 typedef struct {
-	char *name;
+	char *id;
 	char *rest;
+	char *name;
 } SeqID_prf_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *accession;
 	char *name;
-	char *rest;
 } SeqID_swissprot_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *entry;
 	char *chain;
-	char *rest;
 } SeqID_pdb1_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *entry;
 	char *chain;
 	char *pdbid;
 	char *sequence;
-	char *rest;
 } SeqID_pdb2_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *country;
 	char *number;
-	char *rest;
 } SeqID_patents_t;
 
 typedef struct {
-	char *number;
+	char *id;
 	char *rest;
+	char *number;
 } SeqID_bbs_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *database;
 	char *identifier;
-	char *rest;
 } SeqID_gnl_t;
 
 typedef struct {
+	char *id;
+	char *rest;
 	char *accession;
 	char *locus;
-	char *rest;
 } SeqID_ncbiref_t;
 
 typedef struct {
-	char *identifier;
+	char *id;
 	char *rest;
+	char *identifier;
 } SeqID_local_t;
 
+typedef struct {
+	char *id;
+	char *rest;
+} SeqID_unknown_t;
+
+typedef struct {
+	char *id;
+	char *rest;
+} SeqID_common_t;
+
 typedef union {
-	char             *unknown;
+	SeqID_unknown_t   unknown;
 	SeqID_genbank_t   genbank;
 	SeqID_embl_t      embl;
 	SeqID_ddbj_t      ddbj;
@@ -116,6 +139,7 @@ typedef union {
 	SeqID_gnl_t       gnl;
 	SeqID_ncbiref_t   ncbiref;
 	SeqID_local_t     local;
+	SeqID_common_t    common;
 } SeqID_t;
 
 SeqID_fmt_t SeqID_parse(char *buffer, size_t buflen, SeqID_t *dst);

@@ -222,10 +222,9 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 
 		} while(ch != '\n');
 
-		buffer[--dst->hdr_len] = '\0';
-		buffer = sm_realloc(buffer, sizeof(char) * (dst->hdr_len + 1));
+		buffer[dst->hdr_len - 1] = '\0';
+		buffer = sm_realloc(buffer, sizeof(char) * dst->hdr_len);
 		dst->hdr_mem = buffer;
-
 
 		_D(" Read header: \"%s\"\n", buffer);
 		_D("Header count: %u\n", dst->hdr_cnt);
@@ -259,6 +258,9 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 
 			++i;
 		}
+
+		if (dst->hdr_cnt > 0)
+			dst->rec_id = dst->hdr[0].seqid.common.id;
 
 		/*
 		 * Analyze/Read the sequence
@@ -294,6 +296,7 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 						_D("Unexpected EOF: got header, but no sequence data\n");
 						goto fail;
 					} else {
+						++dst->seq_lines;
 						goto finalize_seq;
 					}
 				}

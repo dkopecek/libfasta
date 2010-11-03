@@ -39,6 +39,7 @@ typedef struct {
 	FASTA_rechdr_t *hdr;     /**< parsed headers */
 	uint32_t        hdr_cnt; /**< number of headers */
 	void           *hdr_mem; /**< memory where all the headers are stored */
+	char           *rec_id;  /**< ID guessed from the header information */
 
 	uint64_t  hdr_start; /**< header file offset */
 	uint32_t  hdr_len;   /**< lenght of the header */

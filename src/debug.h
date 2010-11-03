@@ -61,7 +61,7 @@ void __seap_debuglog (const char *srcfile, const char *srcfn, size_t srcln, cons
   /**
    * Hardcoded output filename.
    */
-#define SEAP_DEBUG_FILE "debug.log"
+#define SEAP_DEBUG_FILE "libfasta_debug.log"
   /**
    * Name of the environment variable that can be used to change the
    * default output filename.

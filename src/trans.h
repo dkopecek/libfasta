@@ -2,7 +2,7 @@
 #define TRANS_H
 
 #include <stdint.h>
-#include <assume.h>
+#include "assume.h"
 
 typedef struct {
 	uint8_t src_width;
