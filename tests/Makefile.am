@@ -2,7 +2,7 @@ TESTS= T1.sh T2.sh T3.sh
 check_PROGRAMS= T1_noidx_count T2_noidx_read T3_noidx_trans
 
 AM_CPPFLAGS= -I$(top_srcdir)/src
-LDADD= $(top_builddir)/src/libfasta.la
+LDADD= $(top_builddir)/src/libfasta-1.0.la
 
 EXTRA_DIST= T1.sh T2.sh T3.sh data/multi.fa data/multi2.fa data/simple.fa
 
