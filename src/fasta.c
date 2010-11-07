@@ -935,7 +935,33 @@ int fasta_rewind(FASTA *fa)
 
 int fasta_seeko(FASTA *fa, off_t off, int whence)
 {
-	return (-1);
+	off_t newpos;
+
+	assume_d(fa != NULL, -1);
+
+	switch (whence) {
+	case SEEK_SET:
+		newpos = off;
+		break;
+	case SEEK_CUR:
+		newpos = off + fa->fa_rindex;
+		break;
+	case SEEK_END:
+		newpos = fa->fa_rcount - off - 1;
+		break;
+	default:
+		errno = EINVAL;
+		return (-1);
+	}
+
+	if (newpos < 0 || newpos >= fa->fa_rcount) {
+		errno = ERANGE;
+		return (-1);
+	}
+
+	fa->fa_rindex = (uint32_t) newpos;
+
+	return (0);
 }
 
 off_t fasta_tello(FASTA *fa)
