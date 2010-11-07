@@ -19,8 +19,10 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_LIBTOOL
 
-CFLAGS="$CFLAGS -O0 -g -fno-inline-functions -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused"
-#CFLAGS="$CFLAGS -O2 -DNDEBUG -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused"
+CFLAGS="$CFLAGS -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused -Wformat"
+
+CFLAGS_OPTIMIZED="-O2 -finline-functions -DNDEBUG"
+CFLAGS_DEBUGGING="-O0 -g -fno-inline-functions"
 
 # Checks for libraries.
 
@@ -40,9 +42,25 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([atexit strchr strdup strerror])
 
+AC_ARG_ENABLE([debug],
+     [AC_HELP_STRING([--enable-debug], [enable debugging flags (default=no)])],
+     [case "${enableval}" in
+       yes) debug=yes ;;
+       no)  debug=no ;;
+       *) AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+     esac], [debug=no])
+
+if test "$debug" = "yes"; then
+   CFLAGS="$CFLAGS $CFLAGS_DEBUGGING"
+else
+   CFLAGS="$CFLAGS $CFLAGS_OPTIMIZED"
+fi
+
 AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 tests/Makefile
 		 libfasta-1.0.pc])
 
 AC_OUTPUT
+
+echo "CFLAGS: $CFLAGS"
