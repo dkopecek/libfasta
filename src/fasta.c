@@ -297,6 +297,8 @@ static int __index_read0(FILE *idxFP, FILE *seqFP, FASTA_rec_t *dst)
 			   dst->seq_linew,
 			   dst->seq_lastw);
 
+			dst->flags = 0;
+
 			/*
 			 * Seek to hdr_start - 1, because __fahdr_read0 expects the '>'
 			 */
