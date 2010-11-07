@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <errno.h>
 #include "assume.h"
@@ -13,46 +14,317 @@
 #include "trans.h"
 
 /*
- * XXX: not efficient... rewrite to bitmasks, separate
- *      alphabets + union
+ * Nucleic Acid letter bitmask
  */
+const uint32_t __NA_mask[] = {
+	0x00000000, 0x00002000, 0x03fc699e, 0x03fc699e,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
+/*
+ * Amino Acid letter bitmask
+ */
+const uint32_t __AA_mask[] = {
+	0x00000000, 0x00002000, 0x07fffbfe, 0x07fffbfe,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
+/*
+ * Sequence letter bitmask
+ */
+const uint32_t __SQ_mask[] = {
+	0x00000000, 0x00002000, 0x07fffbfe, 0x07fffbfe,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
 static bool issequence(int ch)
 {
-	switch(toupper(ch)) {
-	case 'A':
-	case 'C':
-	case 'G':
-	case 'T':
-	case 'U':
-	case 'R':
-	case 'Y':
-	case 'K':
-	case 'M':
-	case 'S':
-	case 'W':
-	case 'B':
-	case 'D':
-	case 'H':
-	case 'V':
-	case 'N':
-	case 'X':
-	case '-':
-		/* nucleic acid */
-		return (true);
-	case 'E':
-	case 'F':
-	case 'I':
-	case 'L':
-	case 'O':
-	case 'P':
-	case 'Q':
-	case 'Z':
-	case '*':
-		/* amino acid */
-		return (true);
+	if (ch >= 0 && ch < 256)
+		return (__SQ_mask[ch / (sizeof __SQ_mask[0] * 8)]) & (1 << (ch % (sizeof __SQ_mask[0] * 8)));
+	else
+		return (false);
+}
+
+static int __index_write(FASTA *fa, const char *idxpath)
+{
+	register uint32_t i;
+	struct stat st;
+
+	assume_d(fa != NULL, -1);
+	assume_d(idxpath != NULL, -1);
+
+	fa->fa_idxFP = fopen(idxpath, "w");
+
+	if (fa->fa_idxFP == NULL) {
+		_D("Unable to open \"%s\" for writing\n", idxpath);
+		return (-1);
 	}
 
-	return (false);
+	if (fstat(fileno(fa->fa_seqFP), &st) != 0) {
+		fclose(fa->fa_idxFP);
+		fa->fa_idxFP = NULL;
+		return (-1);
+	}
+
+	fprintf(fa->fa_idxFP,
+		";filesize=%"PRIu64"\n"
+		";chksum=0x%08x\n"
+		";rcount=%u\n",
+		st.st_size, 0x0 /* TODO */, fa->fa_rcount);
+
+	for (i = 0; i < fa->fa_rcount; ++i) {
+		fprintf(fa->fa_idxFP,
+			"%"PRIu64" "
+			"%"PRIu32" "
+			"%"PRIu64" "
+			"%"PRIu64" "
+			"%"PRIu64" "
+			"%"PRIu32" "
+			"%"PRIu32" "
+			"%"PRIu32"\n",
+			fa->fa_record[i].hdr_start,
+			fa->fa_record[i].hdr_len,
+			fa->fa_record[i].seq_start,
+			fa->fa_record[i].seq_rawlen,
+			fa->fa_record[i].seq_len,
+			fa->fa_record[i].seq_lines,
+			fa->fa_record[i].seq_linew,
+			fa->fa_record[i].seq_lastw);
+	}
+
+	if (!(fa->fa_options & FASTA_KEEPOPEN)) {
+		fclose(fa->fa_idxFP);
+		fa->fa_idxFP = NULL;
+	}
+
+	return (0);
+}
+
+static int __fahdr_read0(FILE *fp, FASTA_rec_t *dst)
+{
+	register int ch;
+	register uint32_t i;
+
+	char    *buffer;
+	uint32_t buflen;
+	char    *buftok;
+	uint32_t toklen;
+
+	ch = getc_unlocked(fp);
+
+	if (ch != '>')
+		return (-1);
+
+	/*
+	 * Read all headers
+	 */
+	dst->hdr_start = (uint64_t)ftello(fp);
+	dst->hdr_len   = 0;
+	dst->hdr_cnt   = 1;
+
+	buflen = 1024;
+	buffer = sm_alloc(sizeof(char) * buflen);
+
+	do {
+		if (dst->hdr_len >= buflen) {
+			buflen += 1024;
+			buffer  = sm_realloc(buffer, sizeof(char) * buflen);
+		}
+
+		buffer[dst->hdr_len++] = ch = getc_unlocked(fp);
+
+		if (ch == 0x01) /* ^A */
+			++dst->hdr_cnt;
+
+	} while(ch != '\n');
+
+	buffer[dst->hdr_len - 1] = '\0';
+	buffer = sm_realloc(buffer, sizeof(char) * dst->hdr_len);
+	dst->hdr_mem = buffer;
+
+	_D(" Read header: \"%s\"\n", buffer);
+	_D("Header count: %u\n", dst->hdr_cnt);
+
+	/*
+	 * Parse headers
+	 */
+	dst->hdr    = sm_alloc(sizeof(FASTA_rechdr_t) * dst->hdr_cnt);
+	dst->flags |= FASTA_REC_FREEHDR;
+
+	i = 0;
+
+	while ((buftok = strsep(&buffer, "\x01")) != NULL) {
+		/*
+		 * Sanity check
+		 */
+		if (i >= dst->hdr_cnt) {
+			_D("Insane value(s): i=%u, dst->hdr_cnt=%u\n", i, dst->hdr_cnt);
+			goto fail;
+		}
+
+		/*
+		 * Parse the header using the SeqID parser
+		 */
+		if ((dst->hdr[i].seqid_fmt = SeqID_parse(buftok, strlen(buftok),
+							 &dst->hdr[i].seqid)) == SEQID_ERROR)
+		{
+			_D("SeqID returned an error: h=\"%s\" l=%zu\n", buftok, toklen);
+			goto fail;
+		}
+
+		++i;
+	}
+
+	if (dst->hdr_cnt > 0)
+		dst->rec_id = dst->hdr[0].seqid.common.id;
+
+	return (0);
+fail:
+	if (dst->hdr != NULL)
+		sm_free(dst->hdr);
+	if (dst->hdr_mem != NULL)
+		sm_free(dst->hdr_mem);
+
+	return (-1);
+}
+
+/**
+ * Read key=value pairs from the index file, ignoring unknown
+ * keys
+ */
+static int __idxhdr_read0(FASTA *fa, FASTA_idxhdr_t *ihdr)
+{
+	char   buffer[2048+1];
+	char  *bufptr;
+	char  *buftok;
+	size_t buflen;
+
+	register int ch;
+
+	while (!feof(fa->fa_idxFP)) {
+		ch = getc_unlocked(fa->fa_idxFP);
+
+		_D("ch=%c\n", ch);
+
+		if (ch != ';') {
+			ungetc(ch, fa->fa_idxFP);
+			return(0);
+		}
+
+		if (fgets(buffer,
+			  sizeof buffer, fa->fa_idxFP) == NULL)
+		{
+			break;
+		}
+
+		buflen = strlen(buffer);
+
+		if (buffer[buflen - 1] != '\n')
+			return (FASTA_ENOBUF);
+
+		bufptr = buffer;
+		buftok = strsep(&bufptr, "=");
+
+		if (buftok == NULL || bufptr == NULL)
+			continue; /* skip this line */
+
+		if (strcmp(buftok, "filesize") == 0) {
+			ihdr->filesize = strtoull(bufptr, NULL, 10);
+
+			_D("filesize=%"PRIu64"\n", ihdr->filesize);
+
+			if (errno == ERANGE || errno == EINVAL)
+				return (FASTA_EINVAL);
+		} else if (strcmp(buftok, "chksum") == 0) {
+			ihdr->chksum = strtol(bufptr, NULL, 16);
+
+			_D("chksum=0x%08x\n", ihdr->chksum);
+
+			if (errno == ERANGE || errno == EINVAL)
+				return (FASTA_EINVAL);
+		} else if (strcmp(buftok, "rcount") == 0) {
+			ihdr->rcount = strtol(bufptr, NULL, 10);
+
+			_D("rcount=0x%08x (%s)\n", ihdr->rcount, bufptr);
+
+			if (errno == ERANGE || errno == EINVAL)
+				return (FASTA_EINVAL);
+		}
+	}
+
+	return (FASTA_EUNEXPEOF);
+}
+
+static int __index_read0(FILE *idxFP, FILE *seqFP, FASTA_rec_t *dst)
+{
+	int r;
+
+	if (!feof_unlocked(idxFP)) {
+		switch (r = fscanf(idxFP,
+			       "%"PRIu64" "
+			       "%"PRIu32" "
+			       "%"PRIu64" "
+			       "%"PRIu64" "
+			       "%"PRIu64" "
+			       "%"PRIu32" "
+			       "%"PRIu32" "
+			       "%"PRIu32"\n",
+			       &dst->hdr_start,
+			       &dst->hdr_len,
+			       &dst->seq_start,
+			       &dst->seq_rawlen,
+			       &dst->seq_len,
+			       &dst->seq_lines,
+			       &dst->seq_linew,
+			       &dst->seq_lastw))
+		{
+		case 8:
+			_D("index record\n"
+			   "=> %"PRIu64"\n"
+			   "=> %"PRIu32"\n"
+			   "=> %"PRIu64"\n"
+			   "=> %"PRIu64"\n"
+			   "=> %"PRIu64"\n"
+			   "=> %"PRIu32"\n"
+			   "=> %"PRIu32"\n"
+			   "=> %"PRIu32"\n",
+			   dst->hdr_start,
+			   dst->hdr_len,
+			   dst->seq_start,
+			   dst->seq_rawlen,
+			   dst->seq_len,
+			   dst->seq_lines,
+			   dst->seq_linew,
+			   dst->seq_lastw);
+
+			/*
+			 * Seek to hdr_start - 1, because __fahdr_read0 expects the '>'
+			 */
+			if (fseeko(seqFP, dst->hdr_start - 1, SEEK_SET) != 0) {
+				_D("Failed to seek to position %zu in %p\n", dst->hdr_start, seqFP);
+				return (-1);
+			}
+
+			return __fahdr_read0(seqFP, dst);
+		case EOF:
+			return (1);
+#ifndef NDEBUG
+		case 0:
+		{
+			char buffer[2048+1];
+
+			fgets(buffer, sizeof buffer, idxFP);
+			_D("Input doesn't match format:\n"
+			   "=> %s\n", buffer);
+		}
+#endif
+		default:
+			_D("r=%d\n", r);
+			return (-1);
+		}
+	}
+
+	return (1);
 }
 
 static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
@@ -90,6 +362,10 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 	dst->seq_mem = sm_alloc(alloc_size);
 
 	if (atr != NULL) {
+		/*
+		 * An alphabet translation table was defined
+		 * => Read & Translate
+		 */
 		bzero(dst->seq_mem, alloc_size);
 
 		buffer = sm_alloc(sizeof(uint8_t) * dst->seq_linew);
@@ -114,7 +390,7 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 			for (n = 0; n < buflen; ++n)
 				atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
 
-			getc(fp); /* skip the new-line */
+			getc_unlocked(fp); /* skip the new-line */
 		}
 
 		buflen = dst->seq_lastw > 0 ? dst->seq_lastw : dst->seq_linew;
@@ -134,6 +410,10 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 
 		sm_free(buffer);
 	} else {
+		/*
+		 * No alphabet translation defined
+		 * => Read
+		 */
 		buflen = dst->seq_linew;
 
 		for (l = dst->seq_lines - 1; l > 0; --l) {
@@ -150,7 +430,7 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 
 			i += buflen;
 
-			getc(fp); /* skip the new-line */
+			getc_unlocked(fp); /* skip the new-line */
 		}
 
 		buflen = dst->seq_lastw > 0 ? dst->seq_lastw : dst->seq_linew;
@@ -175,15 +455,8 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t *atr)
 {
 	int      ch;
-	char    *buffer;
-	uint32_t buflen;
-	char    *buftok;
-	uint32_t toklen;
-
 	uint32_t plinew; /* previous line width */
 	uint32_t clinew; /* current line width */
-
-	uint32_t i;
 
 	assume_d(fp  != NULL, -1);
 	assume_d(dst != NULL, -1);
@@ -193,74 +466,12 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 	dst->hdr_mem = NULL;
 	dst->seq_mem = NULL;
 
-	while (!feof(fp)) {
-		ch = getc(fp);
-
-		if (ch != '>')
+	while (!feof_unlocked(fp)) {
+		/*
+		 * Read & Parse FASTA header(s)
+		 */
+		if (__fahdr_read0(fp, dst) != 0)
 			return (-1);
-
-		/*
-		 * Read all headers
-		 */
-		dst->hdr_start = (uint64_t)ftello(fp);
-		dst->hdr_len   = 0;
-		dst->hdr_cnt   = 1;
-
-		buflen = 1024;
-		buffer = sm_alloc(sizeof(char) * buflen);
-
-		do {
-			if (dst->hdr_len >= buflen) {
-				buflen += 1024;
-				buffer  = sm_realloc(buffer, sizeof(char) * buflen);
-			}
-
-			buffer[dst->hdr_len++] = ch = getc(fp);
-
-			if (ch == 0x01) /* ^A */
-				++dst->hdr_cnt;
-
-		} while(ch != '\n');
-
-		buffer[dst->hdr_len - 1] = '\0';
-		buffer = sm_realloc(buffer, sizeof(char) * dst->hdr_len);
-		dst->hdr_mem = buffer;
-
-		_D(" Read header: \"%s\"\n", buffer);
-		_D("Header count: %u\n", dst->hdr_cnt);
-
-		/*
-		 * Parse headers
-		 */
-		dst->hdr    = sm_alloc(sizeof(FASTA_rechdr_t) * dst->hdr_cnt);
-		dst->flags |= FASTA_REC_FREEHDR;
-
-		i = 0;
-
-		while ((buftok = strsep(&buffer, "\x01")) != NULL) {
-			/*
-			 * Sanity check
-			 */
-			if (i >= dst->hdr_cnt) {
-				_D("Insane value(s): i=%u, dst->hdr_cnt=%u\n", i, dst->hdr_cnt);
-				goto fail;
-			}
-
-			/*
-			 * Parse the header using the SeqID parser
-			 */
-			if ((dst->hdr[i].seqid_fmt = SeqID_parse(buftok, strlen(buftok),
-								 &dst->hdr[i].seqid)) == SEQID_ERROR)
-			{
-				_D("SeqID returned an error: h=\"%s\" l=%zu\n", buftok, toklen);
-				goto fail;
-			}
-
-			++i;
-		}
-
-		if (dst->hdr_cnt > 0)
-			dst->rec_id = dst->hdr[0].seqid.common.id;
 
 		/*
 		 * Analyze/Read the sequence
@@ -289,9 +500,9 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 			 * Read in the first line of the sequence.
 			 */
 			for (;;) {
-				ch = getc(fp);
+				ch = getc_unlocked(fp);
 
-				if (feof(fp)) {
+				if (feof_unlocked(fp)) {
 					if (dst->seq_len == 0) {
 						_D("Unexpected EOF: got header, but no sequence data\n");
 						goto fail;
@@ -321,9 +532,9 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 			 * Read the rest of the sequence lines.
 			 */
 			for (;;) {
-				ch = getc(fp);
+				ch = getc_unlocked(fp);
 
-				if (feof(fp)) {
+				if (feof_unlocked(fp)) {
 					if (clinew > 0 && !linew_diff)
 						++dst->seq_lines;
 					break;
@@ -383,7 +594,7 @@ finalize_seq:
 	 * ret>0 - EOF (ret=1)
 	 * ret<0 - error
 	 */
-	return (feof(fp) ? 1 : 0);
+	return (feof_unlocked(fp) ? 1 : 0);
 fail:
 	if (dst->hdr != NULL)
 		sm_free(dst->hdr);
@@ -420,6 +631,8 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 		goto fail;
 	}
 
+	flockfile(fa->fa_seqFP);
+
 	if (fstat(fileno(fa->fa_seqFP), &st) != 0) {
 		int e = errno;
 		_D("Failed to get stat information: fp=%p (fd=%d, path=%s), errno=%u, %s\n",
@@ -428,6 +641,8 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 	}
 
 	if (options & FASTA_USEINDEX) {
+		FASTA_idxhdr_t idxhdr;
+
 		if (strlen(path) + strlen(FASTA_INDEX_EXT) < (sizeof idx_path/sizeof(char))) {
 			strcpy(idx_path, path);
 			strcat(idx_path, FASTA_INDEX_EXT);
@@ -440,21 +655,95 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 		fa->fa_idxFP = fopen(idx_path,
 				     (options & FASTA_GENINDEX ? "r" : "r+"));
 
-#if 0
-		/* generate headers from the index */
+		if (fa->fa_idxFP == NULL)
+			goto regen;
 
-		if (options & FATA_CHKINDEX_SLOW) {
+		flockfile(fa->fa_seqFP);
+
+		switch (__idxhdr_read0(fa, &idxhdr)) {
+		case 0:
+			break;
+		default:
+			if (fa->fa_options & FASTA_CHKINDEX_FAIL)
+				goto fail;
+			else {
+				funlockfile(fa->fa_idxFP);
+				fclose(fa->fa_idxFP);
+				fa->fa_idxFP = NULL;
+				goto regen;
+			}
+		}
+
+		_D("Read index header\n"
+		   "=> filesize: %llu\n"
+		   "=>   chksum: 0x%08x\n"
+		   "=>   rcount: %u\n", idxhdr.filesize, idxhdr.chksum, idxhdr.rcount);
+
+		if (options & FASTA_CHKINDEX_SLOW) {
 			/* slow check */
 		} else if (options & FASTA_CHKINDEX_FAST) {
-			/* fast check */
+			register uint32_t i;
+			int r;
+
+			i = 0;
+			fa->fa_rcount = 0;
+
+			do {
+				if (i >= fa->fa_rcount) {
+					_D("=> pre-alloc: fa_rcount=%u\n", fa->fa_rcount);
+
+					if (i == 0)
+						fa->fa_rcount = 8;
+					else if (i < 65535)
+						fa->fa_rcount <<= 1;
+					else
+						fa->fa_rcount += 1024;
+
+					fa->fa_record = sm_realloc(fa->fa_record, sizeof(FASTA_rec_t) * fa->fa_rcount);
+
+					_D("<= pre-alloc: fa_rcount=%u\n", fa->fa_rcount);
+				}
+
+				_D("Reading index record #%u\n", i);
+			} while ((r = __index_read0(fa->fa_idxFP, fa->fa_seqFP, fa->fa_record + i++)) == 0);
+
+			if (r < 0) {
+				_D("An error ocured while reading the file \"%s\"\n", idx_path);
+				goto fail;
+			}
+
+			fa->fa_rcount = --i;
+			fa->fa_record = sm_realloc(fa->fa_record, sizeof(FASTA_rec_t) * fa->fa_rcount);
+
+			if (fa->fa_rcount != idxhdr.rcount) {
+				_D("fa->fa_rcount (%u) != idxhdr.rcount (%u)\n", fa->fa_rcount, idxhdr.rcount);
+
+				if (fa->fa_options & FASTA_CHKINDEX_FAIL)
+					goto fail;
+				else {
+					funlockfile(fa->fa_idxFP);
+					fclose(fa->fa_idxFP);
+					fa->fa_idxFP = NULL;
+
+					if (fa->fa_rcount > 0) {
+						for (i = 0; i < fa->fa_rcount; ++i)
+							fasta_rec_free(fa->fa_record + i);
+
+						sm_free(fa->fa_record);
+
+						fa->fa_record = NULL;
+						fa->fa_rcount = 0;
+					}
+
+					goto regen;
+				}
+			}
 		}
-#endif
-		/* continue */
-		abort ();
 	} else {
 		register uint32_t i;
 		int r;
 
+	regen:
 		/*
 		 * generate headers from the sequence file
 		 */
@@ -487,12 +776,40 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 
 		fa->fa_rcount = i;
 		fa->fa_record = sm_realloc(fa->fa_record, sizeof(FASTA_rec_t) * fa->fa_rcount);
+
+		if ((fa->fa_options & FASTA_USEINDEX) && (fa->fa_options & FASTA_GENINDEX))
+			__index_write(fa, idx_path);
+	}
+
+	funlockfile(fa->fa_seqFP);
+
+	if (fa->fa_idxFP != NULL)
+		funlockfile(fa->fa_idxFP);
+
+	if (!(options & FASTA_KEEPOPEN)) {
+		if (fa->fa_idxFP != NULL)
+			fclose(fa->fa_idxFP);
+
+		fclose(fa->fa_seqFP);
+
+		fa->fa_seqFP = NULL;
+		fa->fa_idxFP = NULL;
 	}
 
 	return (fa);
 fail:
 	for (; fa->fa_rcount > 0; --fa->fa_rcount)
 		fasta_rec_free(fa->fa_record + fa->fa_rcount - 1);
+
+	if (fa->fa_seqFP != NULL) {
+		funlockfile(fa->fa_seqFP);
+		fclose (fa->fa_seqFP);
+	}
+
+	if (fa->fa_idxFP != NULL) {
+		funlockfile(fa->fa_idxFP);
+		fclose(fa->fa_idxFP);
+	}
 
 	sm_free(fa);
 
@@ -515,6 +832,17 @@ FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *a
 
 	if (atr == NULL)
 		atr = fa->fa_atr;
+
+	if (fa->fa_seqFP == NULL) {
+		fa->fa_seqFP = fopen(fa->fa_path, "r");
+
+		if (fa->fa_seqFP == NULL) {
+			_D("Can't re-open the sequence file: %s\n", fa->fa_path);
+			return (NULL);
+		}
+
+		flockfile(fa->fa_seqFP);
+	}
 
 	if (dst == NULL) {
 		if (flags & FASTA_RAWREC)
@@ -542,18 +870,29 @@ FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *a
 			 */
 			if (__fasta_read1(fa->fa_seqFP, farec, atr) != 0) {
 				/* fail */
-			}
+				fasta_rec_free(farec);
+				farec = NULL;
+			} else
+				++fa->fa_rindex;
 		} else {
 			/*
 			 * the lines have variable length, we have to look for new-lines
 			 */
 			if (__fasta_read2(fa->fa_seqFP, farec, atr) != 0) {
 				/* fail */
-			}
+				fasta_rec_free(farec);
+				farec = NULL;
+			} else
+				++fa->fa_rindex;
 		}
 	}
 
-	++fa->fa_rindex;
+	funlockfile(fa->fa_seqFP);
+
+	if (!((fa->fa_options | flags) & FASTA_KEEPOPEN)) {
+		fclose(fa->fa_seqFP);
+		fa->fa_seqFP = NULL;
+	}
 
 	return (farec);
 }

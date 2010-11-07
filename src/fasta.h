@@ -7,7 +7,7 @@
 #define FASTA_USEINDEX      0x00000002 /**< Use index, if present */
 #define FASTA_GENINDEX      0x00000004 /**< Create the index, if not present */
 #define FASTA_CHKINDEX_FAST 0x00000008 /**< Perform some index integrity check that aren't time consuming */
-#define FASTA_CHKINDEX_LONG 0x00000010 /**< Perform a full index integrity check */
+#define FASTA_CHKINDEX_SLOW 0x00000010 /**< Perform a full index integrity check */
 #define FASTA_CHKINDEX_NONE 0x00000020 /**< Fully trust the index */
 #define FASTA_CHKINDEX      FASTA_CHKINDEX_FAST
 #define FASTA_INMEMSEQ      0x00000040 /**< Load all sequence data into memory */
@@ -17,8 +17,19 @@
 #define FASTA_WRITE         0x00000400 /**< Open for writing */
 #define FASTA_RAWREC        0x00000800 /**< Return a pointer to an internally allocated FASTA record */
 #define FASTA_CSTRSEQ       0x00001000 /**< Return the sequence as a C string (i.e. NUL terminated) */
+#define FASTA_CHKINDEX_FAIL 0x00002000 /**< Fail if the index is corrupted, regenerate otherwise */
 
 #define FASTA_INDEX_EXT "index" /**< filename.fa.index */
+
+#define FASTA_EUNEXPEOF 1
+#define FASTA_EINVAL    2
+#define FASTA_ENOBUF    3
+
+typedef struct {
+	uint64_t filesize; /**< filesize of the sequence file */
+	uint32_t chksum; /**< checksum (CRC-32) of the sequence file */
+	uint32_t rcount; /**< expected count of FASTA records */
+} FASTA_idxhdr_t;
 
 #include "seqid.h"
 #include "trans.h"
