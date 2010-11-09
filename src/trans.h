@@ -1,6 +1,10 @@
 #ifndef TRANS_H
 #define TRANS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include "assume.h"
 
@@ -61,5 +65,9 @@ static inline void atrans_letter_d2s(atrans_t *atr, uint8_t letter, uint32_t i, 
 
 	return;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* TRANS_H */

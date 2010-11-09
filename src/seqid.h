@@ -1,6 +1,10 @@
 #ifndef SEQID_H
 #define SEQID_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stddef.h>
 
 typedef enum {
@@ -143,5 +147,9 @@ typedef union {
 } SeqID_t;
 
 SeqID_fmt_t SeqID_parse(char *buffer, size_t buflen, SeqID_t *dst);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SEQID_H */
