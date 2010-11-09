@@ -12,6 +12,7 @@
 #include "sm_alloc.h"
 #include "fasta.h"
 #include "trans.h"
+#include "crc32.h"
 
 /*
  * Nucleic Acid letter bitmask
@@ -464,6 +465,7 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 	assume_d(dst != NULL, -1);
 
 	dst->flags   = 0;
+	dst->chksum  = 0;
 	dst->hdr     = NULL;
 	dst->hdr_mem = NULL;
 	dst->seq_mem = NULL;
@@ -515,6 +517,7 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 				}
 
 				++dst->seq_rawlen;
+				dst->chksum = crc32(dst->chksum, &ch, 1);
 
 				if (issequence(ch)) {
 					++plinew;
