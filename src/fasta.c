@@ -298,7 +298,8 @@ static int __index_read0(FILE *idxFP, FILE *seqFP, FASTA_rec_t *dst)
 			   dst->seq_linew,
 			   dst->seq_lastw);
 
-			dst->flags = 0;
+			dst->flags   = 0;
+			dst->seq_mem = NULL;
 
 			/*
 			 * Seek to hdr_start - 1, because __fahdr_read0 expects the '>'
@@ -683,6 +684,14 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 		   "=> filesize: %llu\n"
 		   "=>   chksum: 0x%08x\n"
 		   "=>   rcount: %u\n", idxhdr.filesize, idxhdr.chksum, idxhdr.rcount);
+
+		if (st.st_size != idxhdr.filesize) {
+			_D("Recorded (%zu) and actual (%zu) filesizes differ!\n", idxhdr.filesize, st.st_size);
+			funlockfile(fa->fa_idxFP);
+			fclose(fa->fa_idxFP);
+			fa->fa_idxFP = NULL;
+			goto regen;
+		}
 
 		if (options & FASTA_CHKINDEX_SLOW) {
 			/* slow check */
