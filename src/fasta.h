@@ -1,6 +1,8 @@
 #ifndef FASTA_H
 #define FASTA_H
 
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

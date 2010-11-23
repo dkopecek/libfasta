@@ -14,6 +14,10 @@
 #include "trans.h"
 #include "crc32.h"
 
+#ifndef PATH_MAX
+# define PATH_MAX 4096
+#endif
+
 /*
  * Nucleic Acid letter bitmask
  */
@@ -470,6 +474,8 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 	dst->hdr     = NULL;
 	dst->hdr_mem = NULL;
 	dst->seq_mem = NULL;
+	plinew = 0;
+	clinew = 0;
 
 	while (!feof_unlocked(fp)) {
 		/*
@@ -518,7 +524,7 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 				}
 
 				++dst->seq_rawlen;
-				dst->chksum = crc32(dst->chksum, &ch, 1);
+				dst->chksum = crc32(dst->chksum, (unsigned char *)&ch, 1);
 
 				if (issequence(ch)) {
 					++plinew;
@@ -647,7 +653,7 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 	}
 
 	if (options & FASTA_USEINDEX) {
-		FASTA_idxhdr_t idxhdr;
+		FASTA_idxhdr_t idxhdr = { 0 };
 
 		if (strlen(path) + strlen(FASTA_INDEX_EXT) < (sizeof idx_path/sizeof(char))) {
 			strcpy(idx_path, path);

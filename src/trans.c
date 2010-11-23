@@ -6,7 +6,6 @@
 
 atrans_t *atrans_new(uint8_t src_width, uint8_t dst_width, uint8_t src_unknown, uint8_t dst_unknown)
 {
-	va_list   ap;
 	atrans_t *atr = NULL;
 
 	if (src_width > 8 || dst_width > 8) {
