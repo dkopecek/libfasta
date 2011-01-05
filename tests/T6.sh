@@ -13,9 +13,9 @@ LINE_WIDTH_STOP=81
 SEED_START=1
 SEED_STOP=2
 
-SQ_A_path="${srcdir}/sequence_A.fa"
-SQ_B_path="${srcdir}/sequence_B.fa"
-FP_path="${srcdir}/sequence_params.log"
+SQ_A_path="sequence_A.fa"
+SQ_B_path="sequence_B.fa"
+FP_path="sequence_params.log"
 
 echo -n "This may take a while..."
 
