@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 	FASTA_rec_t *farec;
 
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s <fasta-file> [<seq #>]", basename(argv[0]));
+		fprintf(stderr, "Usage: %s <fasta-file> [<seq #>]\n", basename(argv[0]));
 		return (1);
 	}
 
