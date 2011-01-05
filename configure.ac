@@ -1,5 +1,5 @@
-AC_PREREQ([2.67])
-AC_INIT([libfasta], [1.0], [xkopecek@fi.muni.cz])
+AC_PREREQ([2.50])
+AC_INIT([libfasta], [1.1], [xkopecek@fi.muni.cz])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
@@ -19,7 +19,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_LIBTOOL
 
-CFLAGS="$CFLAGS -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused -Wformat -D_POSIX_C_SOURCE=200112L -D_BSD_SOURCE -D_FILE_OFFSET_BITS=64"
+CFLAGS="$CFLAGS -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused -Wformat -D_FILE_OFFSET_BITS=64"
 
 CFLAGS_OPTIMIZED="-O2 -finline-functions -DNDEBUG"
 CFLAGS_DEBUGGING="-O0 -g -fno-inline-functions"

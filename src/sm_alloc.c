@@ -20,6 +20,10 @@
  *      "Daniel Kopecek" <dkopecek@redhat.com>
  */
 
+#if defined(__linux__)
+# define _XOPEN_SOURCE 600
+#endif
+
 #include <stdlib.h>
 #include <errno.h>
 #include "sm_alloc.h"

@@ -1,3 +1,6 @@
+#if defined(__linux__)
+# define _XOPEN_SOURCE
+#endif
 #include <stdio.h>
 #include <ctype.h>
 #include <stdbool.h>

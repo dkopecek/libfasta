@@ -10,6 +10,7 @@ libfasta_1_0_la_SOURCES=	debug.c		\
 				crc32.c		\
 				crc32.h
 
+libfasta_1_0_la_CFLAGS= -D_BSD_SOURCE
 libfasta_1_0_la_LDFLAGS=
 
 library_includedir=$(includedir)/libfasta-1.0/libfasta
