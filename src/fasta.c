@@ -1127,7 +1127,24 @@ off_t fasta_tello(FASTA *fa)
 
 void *fasta_apply(FASTA *fa, void * (*func)(FASTA_rec_t *, void *), uint32_t options, void *funcarg)
 {
-	return (NULL);
+	void        **result;
+	uint32_t      resnum, i;
+	FASTA_rec_t  *farec;
+
+	resnum = fasta_count(fa);
+
+	if (resnum == 0 || fasta_rewind(fa) != 0)
+		return (NULL);
+
+	result = (void **)sm_alloc(sizeof(void *) * resnum);
+
+	for (i = 0; i < resnum; ++i) {
+		farec     = fasta_read(fa, NULL, FASTA_INMEMSEQ|FASTA_CSTRSEQ, NULL);
+		result[i] = func(farec, funcarg);
+		fasta_rec_free(farec);
+	}
+
+	return (result);
 }
 
 void fasta_close(FASTA *fa)
