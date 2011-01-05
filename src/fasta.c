@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
@@ -173,7 +174,7 @@ static int __fahdr_read0(FILE *fp, FASTA_rec_t *dst)
 		if ((dst->hdr[i].seqid_fmt = SeqID_parse(buftok, strlen(buftok),
 							 &dst->hdr[i].seqid)) == SEQID_ERROR)
 		{
-			_D("SeqID returned an error: h=\"%s\" l=%zu\n", buftok, toklen);
+			_D("SeqID returned an error: h=\"%s\" l=%zu\n", buftok, strlen(buftok));
 			goto fail;
 		}
 
@@ -337,7 +338,130 @@ static int __index_read0(FILE *idxFP, FILE *seqFP, FASTA_rec_t *dst)
 
 static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 {
-	return (-1);
+	size_t alloc_size;
+	char  *buffer;
+	size_t buflen;
+
+	register uint32_t l, n;
+	register uint64_t i;
+
+	if (fseeko(fp, dst->seq_start, SEEK_SET) != 0) {
+		_D("Failed to seek to position %zu in %p\n", dst->seq_start, fp);
+		return (-1);
+	}
+
+	_D("atr=%p\n", atr);
+
+	if (atr != NULL)
+		alloc_size = atrans_s2d_size(atr, dst->seq_rawlen);
+	else
+		alloc_size = dst->seq_rawlen;
+
+	if (dst->flags & FASTA_CSTRSEQ)
+		++alloc_size;
+
+	_D("alloc_size=%zu\n", alloc_size);
+
+	i = 0;
+	dst->seq_mem = sm_alloc(alloc_size);
+	bzero(dst->seq_mem, alloc_size);
+
+	buffer = sm_alloc(sizeof(uint8_t) * FASTA_LINEBUFFER_SIZE);
+	buflen = FASTA_LINEBUFFER_SIZE;
+
+	for (; dst->seq_lines > 0;) {
+		/*
+		 * Read line into buffer
+		 */
+		buflen = fread(buffer, 1, buflen, fp);
+
+		if (buflen == 0) {
+			if (feof(fp) && dst->seq_lines < 2)
+				break;
+			else {
+				_D("An error occured during fread(%p, 1, %zu, %p): errno=%d, %s.\n",
+				   buffer, buflen, fp, errno, strerror(errno));
+
+				sm_free(buffer);
+				sm_free(dst->seq_mem);
+				dst->seq_mem = NULL;
+
+				return (-1);
+			}
+		}
+
+		/*
+		 * Copy/Translate the buffer into seq_mem
+		 */
+		if (atr != NULL) {
+			for (n = 0; n < buflen; ++n) {
+				if (issequence(buffer[n])) {
+					atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
+				} else {
+					if (buffer[n] == '\n') {
+						assume_d(dst->seq_lines > 0, -1);
+						--dst->seq_lines;
+
+						if (dst->seq_lines == 0)
+							goto __A_finish;
+					} else {
+						switch (buffer[n]) {
+						case ' ':
+							/* ignore */
+							break;
+						default:
+							_D("Unexpected character: %c (%u)\n", (char)buffer[n], buffer[n]);
+
+							sm_free(buffer);
+							sm_free(dst->seq_mem);
+							dst->seq_mem = NULL;
+
+							return (-1);
+						}
+					}
+				}
+			}
+		} else {
+			for (n = 0; n < buflen; ++n) {
+				if (issequence(buffer[n])) {
+					((uint8_t *)(dst->seq_mem))[i++] = buffer[n];
+				} else {
+					if (buffer[n] == '\n') {
+						assume_d(dst->seq_lines > 0, -1);
+						--dst->seq_lines;
+
+						if (dst->seq_lines == 0)
+							goto __A_finish;
+					} else {
+						switch (buffer[n]) {
+						case ' ':
+							/* ignore */
+							break;
+						default:
+							_D("Unexpected character: %c (%u)\n", (char)buffer[n], buffer[n]);
+
+							sm_free(buffer);
+							sm_free(dst->seq_mem);
+							dst->seq_mem = NULL;
+
+							return (-1);
+						}
+					}
+				}
+			}
+		}
+	}
+	__A_finish:
+	sm_free(buffer);
+	dst->seq_len = i;
+
+	if (dst->flags & FASTA_CSTRSEQ) {
+		dst->seq_mem[i] = '\0';
+		dst->seq_mem = sm_realloc(dst->seq_mem, sizeof(uint8_t) * (dst->seq_len + 1));
+	} else
+		dst->seq_mem = sm_realloc(dst->seq_mem, sizeof(uint8_t) * dst->seq_len);
+
+	return (0);
 }
 
 static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
@@ -569,7 +693,7 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 				} else {
 					switch (ch) {
 					case '\n':
-						if (linew_update && clinew > 0) {
+						if (linew_update /* && clinew > 0 */) {
 							if (clinew != plinew)
 								linew_diff = true;
 							else {
@@ -590,6 +714,17 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 							goto fail;
 						}
 						break;
+					case ' ': /* ignore */
+						if (linew_update) {
+							clinew = 0;
+							plinew = 0;
+							linew_update = false;
+							linew_diff   = false;
+						}
+						break;
+					default:
+						_D("Unexpected character '%c' (%u)\n");
+						goto fail;
 					}
 				}
 			}

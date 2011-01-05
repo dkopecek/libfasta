@@ -31,6 +31,8 @@ extern "C" {
 #define FASTA_EINVAL    2
 #define FASTA_ENOBUF    3
 
+#define FASTA_LINEBUFFER_SIZE 4096
+
 typedef struct {
 	uint64_t filesize; /**< filesize of the sequence file */
 	uint32_t chksum; /**< checksum (CRC-32) of the sequence file */
