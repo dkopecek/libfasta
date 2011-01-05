@@ -19,7 +19,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_LIBTOOL
 
-CFLAGS="$CFLAGS -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused -Wformat"
+CFLAGS="$CFLAGS -pipe -std=c99 -Wall -Wundef -Wno-unknown-pragmas -Wno-unused -Wformat -D_POSIX_C_SOURCE=200112L -D_BSD_SOURCE -D_FILE_OFFSET_BITS=64"
 
 CFLAGS_OPTIMIZED="-O2 -finline-functions -DNDEBUG"
 CFLAGS_DEBUGGING="-O0 -g -fno-inline-functions"
