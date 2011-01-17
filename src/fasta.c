@@ -268,6 +268,12 @@ static int __index_read0(FILE *idxFP, FILE *seqFP, FASTA_rec_t *dst)
 {
 	int r;
 
+	dst->flags   = 0;
+	dst->chksum  = 0;
+	dst->hdr     = NULL;
+	dst->hdr_mem = NULL;
+	dst->seq_mem = NULL;
+
 	if (!feof_unlocked(idxFP)) {
 		switch (r = fscanf(idxFP,
 			       "%"PRIu64" "
@@ -791,7 +797,9 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 	}
 
 	if (options & FASTA_USEINDEX) {
-		FASTA_idxhdr_t idxhdr = { 0 };
+		FASTA_idxhdr_t idxhdr;
+
+		memset(&idxhdr, 0, sizeof (FASTA_idxhdr_t));
 
 		if (strlen(path) + strlen(FASTA_INDEX_EXT) < (sizeof idx_path/sizeof(char))) {
 			strcpy(idx_path, path);
