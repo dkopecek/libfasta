@@ -853,6 +853,7 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 
 			i = 0;
 			fa->fa_rcount = 0;
+			fa->fa_record = NULL;
 
 			do {
 				if (i >= fa->fa_rcount) {
@@ -872,10 +873,9 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 
 				_D("Reading index record #%u\n", i);
 			} while ((r = __index_read0(fa->fa_idxFP, fa->fa_seqFP, fa->fa_record + i++)) == 0);
-
 			if (r < 0) {
 				_D("An error ocured while reading the file \"%s\"\n", idx_path);
-				goto fail;
+				goto prefail;
 			}
 
 			fa->fa_rcount = --i;
@@ -883,7 +883,7 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 
 			if (fa->fa_rcount != idxhdr.rcount) {
 				_D("fa->fa_rcount (%u) != idxhdr.rcount (%u)\n", fa->fa_rcount, idxhdr.rcount);
-
+			prefail:
 				if (fa->fa_options & FASTA_CHKINDEX_FAIL)
 					goto fail;
 				else {
@@ -916,6 +916,8 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 		i = 0;
 		fa->fa_rcount = 0;
 
+		rewind(fa->fa_seqFP);
+
 		do {
 			if (i >= fa->fa_rcount) {
 				_D("=> pre-alloc: fa_rcount=%u\n", fa->fa_rcount);
@@ -937,6 +939,14 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 
 		if (r < 0) {
 			_D("An error ocured while reading the file \"%s\"\n", fa->fa_path);
+
+			/*
+			 * Decrease `i' to prevent double-free. __fasta_read0 ensures that in
+			 * case of an error the requested fasta record will not be initialized
+			 * and therefore will not need to be freed.
+			 */
+			fa->fa_rcount = --i;
+
 			goto fail;
 		}
 
