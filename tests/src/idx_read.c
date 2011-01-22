@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	if (fa != NULL) {
 		printf("Total records: %u\n", fasta_count(fa));
 	} else {
-		printf("fasta_open => NULL\n");
+		printf("fasta_open(%s) => NULL\n", argv[1]);
 		return (2);
 	}
 
