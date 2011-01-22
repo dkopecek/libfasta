@@ -1,5 +1,5 @@
 AC_PREREQ([2.50])
-AC_INIT([libfasta], [1.1], [xkopecek@fi.muni.cz])
+AC_INIT([libfasta], [1.3], [xkopecek@fi.muni.cz])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
