@@ -703,9 +703,14 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 					switch (ch) {
 					case '\n':
 						if (linew_update /* && clinew > 0 */) {
-							if (clinew != plinew)
+							if (clinew != plinew) {
 								linew_diff = true;
-							else {
+
+								if (clinew == 0) {
+									linew_update = false;
+									plinew  = 0;
+								}
+							} else {
 								plinew = clinew;
 								clinew = 0;
 							}
