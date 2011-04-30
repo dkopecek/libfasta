@@ -19,7 +19,8 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_LIBTOOL
 
-CFLAGS="$CFLAGS -pipe -std=c99 -Wall -Wextra -Wundef -Wno-unknown-pragmas -Wno-unused -Wno-unused-parameter -Wformat -D_FILE_OFFSET_BITS=64"
+CFLAGS="$CFLAGS -pipe -std=c99 -Wall -Wextra -Wundef -Wno-unknown-pragmas -Wformat"
+CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -D_LARGE_FILE_SOURCE=1"
 
 CFLAGS_OPTIMIZED="-O2 -finline-functions -DNDEBUG"
 CFLAGS_DEBUGGING="-O0 -g -fno-inline-functions"
@@ -27,20 +28,16 @@ CFLAGS_DEBUGGING="-O0 -g -fno-inline-functions"
 # Checks for libraries.
 
 # Checks for header files.
-AC_CHECK_HEADERS([limits.h stddef.h stdint.h stdlib.h string.h sys/file.h unistd.h])
+AC_CHECK_HEADERS([inttypes.h limits.h stdlib.h unistd.h ctype.h errno.h stdbool.h sys/stat.h assert.h stddef.h string.h sys/types.h stdio.h stdint.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_HEADER_STDBOOL
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
 # Checks for library functions.
-AC_FUNC_FSEEKO
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
-AC_CHECK_FUNCS([atexit strchr strdup strerror])
+AC_CHECK_FUNCS([malloc realloc atexit strchr strdup strerror lseek])
 
 AC_ARG_ENABLE([debug],
      [AC_HELP_STRING([--enable-debug], [enable debugging flags (default=no)])],

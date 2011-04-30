@@ -1,13 +1,14 @@
 #ifndef FASTA_H
 #define FASTA_H
 
+#include <stdio.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
 
 #define FASTA_KEEPOPEN      0x00000001 /**< Keep the FASTA file/index open */
 #define FASTA_USEINDEX      0x00000002 /**< Use index, if present */
@@ -72,7 +73,7 @@ typedef struct {
 	uint32_t  seq_linew; /**< line width */
 	uint32_t  seq_lastw; /**< last line width */
 
-	char     *seq_mem;  /**< in-memory sequence data */
+	uint8_t  *seq_mem;  /**< in-memory sequence data */
 } FASTA_rec_t;
 
 typedef struct {

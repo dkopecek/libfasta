@@ -2,8 +2,8 @@
 #include <stddef.h>
 #include <string.h>
 #include <ctype.h>
-#include <assume.h>
-#include "debug.h"
+#include <assert.h>
+#include "helpers.h"
 #include "seqid.h"
 
 static bool wspacep(char *s)
@@ -17,36 +17,37 @@ static bool wspacep(char *s)
 static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *gi_number, *db, *accession, *locus, *rest;
-	size_t gi_number_len, db_len, accession_len, locus_len, rest_len;
+	size_t gi_number_len, db_len, accession_len, locus_len;
+
+        (void)buflen;
 
 	gi_number = strsep(&buffer, "|");
 
 	if (gi_number != NULL) {
-		_D("gi_number=\"%s\"\n", gi_number);
+		dP("gi_number=\"%s\"\n", gi_number);
 
 		gi_number_len = strlen(gi_number);
 		db = strsep(&buffer, "|");
 
 		if (db != NULL) {
-			_D("db=\"%s\"\n", db);
+			dP("db=\"%s\"\n", db);
 
 			db_len = strlen(db);
 			accession = strsep(&buffer, "|");
 
 			if (accession != NULL) {
-				_D("accession=\"%s\"\n", accession);
+				dP("accession=\"%s\"\n", accession);
 
 				accession_len = strlen(accession);
 				locus = strsep(&buffer, " ");
 
 				if (locus != NULL) {
-					_D("locus=\"%s\"\n", locus);
+					dP("locus=\"%s\"\n", locus);
 
 					locus_len = strlen(locus);
 					rest      = buffer;
-					rest_len  = buffer != NULL ? strlen(buffer) : 0;
 
-					_D("rest=\"%s\"\n", rest);
+					dP("rest=\"%s\"\n", rest);
 
 					if (strcmp("gb", db) == 0) {
 						dst->genbank.id        = gi_number;
@@ -104,23 +105,23 @@ static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_pir_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *empty, *entry, *rest;
-	size_t empty_len, entry_len, rest_len;
+	size_t empty_len;
+
+        (void)buflen;
 
 	empty = strsep(&buffer, "|");
 
 	if (empty != NULL) {
-		_D("empty=\"%s\"\n", empty);
+		dP("empty=\"%s\"\n", empty);
 
 		empty_len = strlen(empty);
 		entry = strsep(&buffer, " ");
 
 		if (entry != NULL) {
-			_D("entry=\"%s\"\n", entry);
+			rest = buffer;
 
-			rest      = buffer;
-			rest_len  = buffer != NULL ? strlen(buffer) : 0;
-
-			_D("rest=\"%s\"\n", rest);
+			dP("entry=\"%s\"\n", entry);
+			dP("rest=\"%s\"\n", rest);
 
 			dst->nbrfpir.id    = entry;
 			dst->nbrfpir.entry = entry;
@@ -138,23 +139,23 @@ static SeqID_fmt_t SeqID_pir_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_prf_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *empty, *name, *rest;
-	size_t empty_len, name_len, rest_len;
+	size_t empty_len;
+
+        (void)buflen;
 
 	empty = strsep(&buffer, "|");
 
 	if (empty != NULL) {
-		_D("empty=\"%s\"\n", empty);
+		dP("empty=\"%s\"\n", empty);
 
 		empty_len = strlen(empty);
 		name = strsep(&buffer, " ");
 
 		if (name != NULL) {
-			_D("name=\"%s\"\n", name);
+			rest = buffer;
 
-			rest      = buffer;
-			rest_len  = buffer != NULL ? strlen(buffer) : 0;
-
-			_D("rest=\"%s\"\n", rest);
+			dP("name=\"%s\"\n", name);
+			dP("rest=\"%s\"\n", rest);
 
 			dst->prf.id   = name;
 			dst->prf.name = name;
@@ -172,24 +173,23 @@ static SeqID_fmt_t SeqID_prf_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_sp_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *accession, *name, *rest;
-	size_t accession_len, name_len, rest_len;
+	size_t accession_len;
+
+        (void)buflen;
 
 	accession = strsep(&buffer, "|");
 
 	if (accession != NULL) {
-		_D("accession=\"%s\"\n", accession);
+		dP("accession=\"%s\"\n", accession);
 
 		accession_len = strlen(accession);
 		name = strsep(&buffer, " ");
 
 		if (name != NULL) {
-			_D("name=\"%s\"\n", name);
+			rest = buffer;
 
-			name_len = strlen(name);
-			rest     = buffer;
-			rest_len = buffer != NULL ? strlen(buffer) : 0;
-
-			_D("rest=\"%s\"\n", rest);
+			dP("name=\"%s\"\n", name);
+			dP("rest=\"%s\"\n", rest);
 
 			dst->swissprot.id        = accession;
 			dst->swissprot.accession = accession;
@@ -208,24 +208,23 @@ static SeqID_fmt_t SeqID_sp_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_pdb1_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *entry, *chain, *rest;
-	size_t entry_len, chain_len, rest_len;
+	size_t entry_len;
+
+        (void)buflen;
 
 	entry = strsep(&buffer, "|");
 
 	if (entry != NULL) {
-		_D("entry=\"%s\"\n", entry);
+		dP("entry=\"%s\"\n", entry);
 
 		entry_len = strlen(entry);
 		chain = strsep(&buffer, " ");
 
 		if (chain != NULL) {
-			_D("chain=\"%s\"\n", chain);
+			rest = buffer;
 
-			chain_len = strlen(chain);
-			rest      = buffer;
-			rest_len  = buffer != NULL ? strlen(buffer) : 0;
-
-			_D("rest=\"%s\"\n", rest);
+			dP("chain=\"%s\"\n", chain);
+			dP("rest=\"%s\"\n", rest);
 
 			dst->pdb1.id    = entry;
 			dst->pdb1.entry = entry;
@@ -244,36 +243,36 @@ static SeqID_fmt_t SeqID_pdb1_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_pdb2_parse(char *buffer, size_t buflen, char *ftok, size_t tlen, SeqID_t *dst)
 {
 	char *entry, *pdbid, *chain, *sequence, *rest;
-	size_t entry_len, pdbid_len, chain_len, sequence_len, rest_len;
+	size_t entry_len, pdbid_len, chain_len;
+
+        (void)tlen;
+        (void)buflen;
 
 	entry = strsep(&ftok, ":");
 
 	if (entry != NULL) {
-		_D("entry=\"%s\"\n", entry);
+		dP("entry=\"%s\"\n", entry);
 
 		entry_len = strlen(entry);
 		pdbid = strsep(&buffer, "|");
 
 		if (pdbid != NULL) {
-			_D("pdbid=\"%s\"\n", pdbid);
+			dP("pdbid=\"%s\"\n", pdbid);
 
 			pdbid_len = strlen(pdbid);
 			chain = strsep(&buffer, "|");
 
 			if (chain != NULL) {
-				_D("chain=\"%s\"\n", chain);
+				dP("chain=\"%s\"\n", chain);
 
 				chain_len = strlen(chain);
 				sequence = strsep(&buffer, " ");
 
 				if (sequence != NULL) {
-					_D("sequence=\"%s\"\n", sequence);
-
-					sequence_len = strlen(sequence);
 					rest = buffer;
-					rest_len = buffer != NULL ? strlen(buffer) : 0;
 
-					_D("rest=\"%s\"\n", rest);
+					dP("sequence=\"%s\"\n", sequence);
+					dP("rest=\"%s\"\n", rest);
 
 					dst->pdb2.id       = pdbid;
 					dst->pdb2.entry    = entry;
@@ -298,24 +297,23 @@ static SeqID_fmt_t SeqID_pdb2_parse(char *buffer, size_t buflen, char *ftok, siz
 static SeqID_fmt_t SeqID_pat_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *country, *number, *rest;
-	size_t country_len, number_len, rest_len;
+	size_t country_len;
+
+        (void)buflen;
 
 	country = strsep(&buffer, "|");
 
 	if (country != NULL) {
-		_D("country=\"%s\"\n", country);
+		dP("country=\"%s\"\n", country);
 
 		country_len = strlen(country);
 		number = strsep(&buffer, " ");
 
 		if (number != NULL) {
-			_D("number=\"%s\"\n", number);
+			rest = buffer;
 
-			number_len = strlen(number);
-			rest       = buffer;
-			rest_len   = buffer != NULL ? strlen(buffer) : 0;
-
-			_D("rest=\"%s\"\n", rest);
+			dP("number=\"%s\"\n", number);
+			dP("rest=\"%s\"\n", rest);
 
 			dst->patents.id      = number;
 			dst->patents.country = country;
@@ -334,17 +332,16 @@ static SeqID_fmt_t SeqID_pat_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_bbs_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *number, *rest;
-	size_t number_len, rest_len;
+
+        (void)buflen;
 
 	number = strsep(&buffer, " ");
 
 	if (number != NULL) {
-		_D("number=\"%s\"\n", number);
-
 		rest = buffer;
-		rest_len = buffer != NULL ? strlen(buffer) : 0;
 
-		_D("rest=\"%s\"\n", rest);
+		dP("number=\"%s\"\n", number);
+		dP("rest=\"%s\"\n", rest);
 
 		dst->bbs.id     = number;
 		dst->bbs.number = number;
@@ -359,24 +356,23 @@ static SeqID_fmt_t SeqID_bbs_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_gnl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *database, *identifier, *rest;
-	size_t database_len, identifier_len, rest_len;
+	size_t database_len;
+
+        (void)buflen;
 
 	database = strsep(&buffer, "|");
 
 	if (database != NULL) {
-		_D("database=\"%s\"\n", database);
+		dP("database=\"%s\"\n", database);
 
 		database_len = strlen(database);
 		identifier = strsep(&buffer, " ");
 
 		if (identifier != NULL) {
-			_D("identifier=\"%s\"\n", identifier);
+			rest = buffer;
 
-			identifier_len = strlen(identifier);
-			rest           = buffer;
-			rest_len       = buffer != NULL ? strlen(buffer) : 0;
-
-			_D("rest=\"%s\"\n", rest);
+			dP("identifier=\"%s\"\n", identifier);
+			dP("rest=\"%s\"\n", rest);
 
 			dst->gnl.id         = identifier;
 			dst->gnl.database   = database;
@@ -395,24 +391,23 @@ static SeqID_fmt_t SeqID_gnl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_ref_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *accession, *locus, *rest;
-	size_t accession_len, locus_len, rest_len;
+	size_t accession_len;
+
+        (void)buflen;
 
 	accession = strsep(&buffer, "|");
 
 	if (accession != NULL) {
-		_D("accession=\"%s\"\n", accession);
+		dP("accession=\"%s\"\n", accession);
 
 		accession_len = strlen(accession);
 		locus = strsep(&buffer, " ");
 
 		if (locus != NULL) {
-			_D("locus=\"%s\"\n", locus);
+			rest = buffer;
 
-			locus_len = strlen(locus);
-			rest       = buffer;
-			rest_len   = buffer != NULL ? strlen(buffer) : 0;
-
-			_D("rest=\"%s\"\n", rest);
+			dP("locus=\"%s\"\n", locus);
+			dP("rest=\"%s\"\n", rest);
 
 			dst->ncbiref.id        = accession;
 			dst->ncbiref.accession = accession;
@@ -431,17 +426,16 @@ static SeqID_fmt_t SeqID_ref_parse(char *buffer, size_t buflen, SeqID_t *dst)
 static SeqID_fmt_t SeqID_lcl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char *identifier, *rest;
-	size_t identifier_len, rest_len;
+
+        (void)buflen;
 
 	identifier = strsep(&buffer, " ");
 
 	if (identifier != NULL) {
-		_D("identifier=\"%s\"\n", identifier);
-
 		rest = buffer;
-		rest_len = buffer != NULL ? strlen(buffer) : 0;
 
-		_D("rest=\"%s\"\n", rest);
+		dP("identifier=\"%s\"\n", identifier);
+		dP("rest=\"%s\"\n", rest);
 
 		dst->local.id         = identifier;
 		dst->local.identifier = identifier;
@@ -460,14 +454,15 @@ SeqID_fmt_t SeqID_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	SeqID_fmt_t fmt = SEQID_UNKNOWN;
 	char *orig = buffer;
 
-	assume_r(buffer != NULL, SEQID_ERROR);
-	assume_r(buflen  > 0,    SEQID_EMPTY);
-	assume_r(dst != NULL,    SEQID_ERROR);
+        if (buffer == NULL || dst == SEQID_ERROR)
+                return (SEQID_ERROR);
+        if (buflen == 0)
+                return (SEQID_EMPTY);
 
 	btok = strsep(&buffer, "|");
 
 	if (btok != NULL) {
-		_D("btok=\"%s\"\n", btok);
+		dP("btok=\"%s\"\n", btok);
 
 		tlen = strlen(btok);
 

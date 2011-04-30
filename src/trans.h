@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "assume.h"
+#include <assert.h>
 
 typedef struct {
 	uint8_t src_width;
@@ -22,7 +22,7 @@ static inline size_t atrans_s2d_size(atrans_t *atr, size_t size)
 {
 	register size_t dst_bw;
 
-	assume_d(atr != NULL, 0);
+	assert(atr != NULL);
 
 	dst_bw = (((size * 8)/atr->src_width) * atr->dst_width);
 
@@ -33,7 +33,7 @@ static inline size_t atrans_d2s_size(atrans_t *atr, size_t size)
 {
 	register size_t src_bw;
 
-	assume_d(atr != NULL, 0);
+	assert(atr != NULL);
 
 	src_bw = (((size * 8)/atr->dst_width) * atr->src_width);
 
@@ -44,8 +44,8 @@ static inline void atrans_letter_s2d(atrans_t *atr, uint8_t letter, uint32_t i, 
 {
 	register uint32_t di;
 
-	assume_d(atr != NULL, /* void */);
-	assume_d(dst != NULL, /* void */);
+	assert(atr != NULL);
+	assert(dst != NULL);
 
 	di = i * atr->dst_width;
 	dst[di/8] |= (atr->tr_letter_s2d[letter] & ((1 << atr->dst_width) - 1)) << (di % 8);
@@ -57,8 +57,8 @@ static inline void atrans_letter_d2s(atrans_t *atr, uint8_t letter, uint32_t i, 
 {
 	register uint32_t di;
 
-	assume_d(atr != NULL, /* void */);
-	assume_d(dst != NULL, /* void */);
+	assert(atr != NULL);
+	assert(dst != NULL);
 
 	di = i * atr->src_width;
 	dst[di/8] |= (atr->tr_letter_d2s[letter] & ((1 << atr->src_width) - 1)) << (di % 8);
