@@ -9,7 +9,6 @@
 extern "C" {
 #endif
 
-
 #define FASTA_KEEPOPEN      0x00000001 /**< Keep the FASTA file/index open */
 #define FASTA_USEINDEX      0x00000002 /**< Use index, if present */
 #define FASTA_GENINDEX      0x00000004 /**< Create the index, if not present */
@@ -34,72 +33,72 @@ extern "C" {
 
 #define FASTA_LINEBUFFER_SIZE 4096
 
-typedef struct {
-	uint64_t filesize; /**< filesize of the sequence file */
-	uint32_t chksum; /**< checksum (CRC-32) of the sequence file */
-	uint32_t rcount; /**< expected count of FASTA records */
-} FASTA_idxhdr_t;
+        typedef struct {
+                uint64_t filesize; /**< filesize of the sequence file */
+                uint32_t chksum; /**< checksum (CRC-32) of the sequence file */
+                uint32_t rcount; /**< expected count of FASTA records */
+        } FASTA_idxhdr_t;
 
 #include "seqid.h"
 #include "trans.h"
 
-typedef struct {
-	SeqID_fmt_t seqid_fmt;
-	SeqID_t     seqid;
-} FASTA_rechdr_t;
+        typedef struct {
+                SeqID_fmt_t seqid_fmt;
+                SeqID_t     seqid;
+        } FASTA_rechdr_t;
 
 #define FASTA_REC_MAGICFL 0xf0fa0000
 #define FASTA_REC_FREESEQ 0x00000001 /**< Allowed to free the sequence memory */
 #define FASTA_REC_FREEHDR 0x00000002 /**< Allowed to free the headers */
 #define FASTA_REC_FREEREC 0x00000004 /**< Allowed to free the memory holding the FASTA record (FASTA_rec_t *) */
 
-typedef struct {
-	uint32_t flags;
-	uint32_t chksum;
+        typedef struct {
+                uint32_t flags;
+                uint32_t chksum;
 
-	FASTA_rechdr_t *hdr;     /**< parsed headers */
-	uint32_t        hdr_cnt; /**< number of headers */
-	void           *hdr_mem; /**< memory where all the headers are stored */
-	char           *rec_id;  /**< ID guessed from the header information */
+                FASTA_rechdr_t *hdr;     /**< parsed headers */
+                uint32_t        hdr_cnt; /**< number of headers */
+                void           *hdr_mem; /**< memory where all the headers are stored */
+                char           *rec_id;  /**< ID guessed from the header information */
 
-	uint64_t  hdr_start; /**< header file offset */
-	uint32_t  hdr_len;   /**< lenght of the header */
+                uint64_t  hdr_start; /**< header file offset */
+                uint32_t  hdr_len;   /**< lenght of the header */
 
-	uint64_t  seq_start; /**< sequence file offset */
-	uint64_t  seq_rawlen;/**< raw sequence length (including '\n', whitespaces, ...) */
-	uint64_t  seq_len;   /**< sequence length */
-	uint32_t  seq_lines; /**< sequence data line count */
+                uint64_t  seq_start; /**< sequence file offset */
+                uint64_t  seq_rawlen;/**< raw sequence length (including '\n', whitespaces, ...) */
+                uint64_t  seq_len;   /**< sequence length */
+                uint32_t  seq_lines; /**< sequence data line count */
 
-	uint32_t  seq_linew; /**< line width */
-	uint32_t  seq_lastw; /**< last line width */
+                uint32_t  seq_linew; /**< line width */
+                uint32_t  seq_lastw; /**< last line width */
 
-	uint8_t  *seq_mem;  /**< in-memory sequence data */
-} FASTA_rec_t;
+                uint8_t  *seq_mem;  /**< in-memory sequence data */
+        } FASTA_rec_t;
 
-typedef struct {
-	uint32_t fa_options;
-	char    *fa_path;
+        typedef struct {
+                uint32_t fa_options;
+                char    *fa_path;
 
-	FILE    *fa_seqFP;
-	FILE    *fa_idxFP;
+                FILE    *fa_seqFP;
+                FILE    *fa_idxFP;
 
-	atrans_t *fa_atr;
+                atrans_t *fa_atr;
 
-	FASTA_rec_t *fa_record;
-	uint32_t     fa_rindex;
-	uint32_t     fa_rcount;
-} FASTA;
+                FASTA_rec_t *fa_record;
+                uint32_t     fa_rindex;
+                uint32_t     fa_rcount;
+        } FASTA;
 
-FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr);
-uint32_t fasta_count(FASTA *fa);
-FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *atr);
-int fasta_write(FASTA *fa, FASTA_rec_t *farec);
-void fasta_rec_free(FASTA_rec_t *farec);
-int fasta_rewind(FASTA *fa);
-int fasta_seeko(FASTA *fa, off_t off, int whence);
-off_t fasta_tello(FASTA *fa);
-void *fasta_apply(FASTA *fa, void * (*func)(FASTA_rec_t *, void *), uint32_t options, void *funcarg);
-void fasta_close(FASTA *fa);
+        FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr);
+        uint32_t fasta_count(FASTA *fa);
+        FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *atr);
+        int fasta_write(FASTA *fa, FASTA_rec_t *farec);
+        void fasta_rec_free(FASTA_rec_t *farec);
+        int fasta_rewind(FASTA *fa);
+        int fasta_seeko(FASTA *fa, off_t off, int whence);
+        off_t fasta_tello(FASTA *fa);
+        void *fasta_apply(FASTA *fa, void * (*func)(FASTA_rec_t *, void *), uint32_t options, void *funcarg);
+        void fasta_close(FASTA *fa);
 
 #ifdef __cplusplus
 }
