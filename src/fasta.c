@@ -43,10 +43,34 @@ const uint32_t __SQ_mask[] = {
 	0x00000000, 0x00000000, 0x00000000, 0x00000000
 };
 
+/*
+ * default NA coding letter bitmask
+ */
+const uint32_t __NA_CD_mask[] = {
+        0x00000000, 0x00000000, 0x0010008a, 0x0010008a,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
+/*
+ * default AA coding letter bitmask
+ */
+const uint32_t __AA_CD_mask[] = {
+        0x00000000, 0x00000000, 0x06fffbfe, 0x02fffbfe,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
 static bool issequence(int ch)
 {
 	if (ch >= 0 && ch < 256)
 		return (__SQ_mask[ch / (sizeof __SQ_mask[0] * 8)]) & (1 << (ch % (sizeof __SQ_mask[0] * 8)));
+	else
+		return (false);
+}
+
+static bool iscodingseq(FASTA *fa, int ch)
+{
+	if (ch >= 0 && ch < 256)
+		return (fa->fa_CDSmask[ch / (sizeof fa->fa_CDSmask[0] * 8)]) & (1 << (ch % (sizeof fa->fa_CDSmask[0] * 8)));
 	else
 		return (false);
 }
@@ -341,7 +365,41 @@ static int __index_read0(FILE *idxFP, FILE *seqFP, FASTA_rec_t *dst)
 	return (1);
 }
 
-static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
+static inline void __fasta_cdseg_process(FASTA *fa, FASTA_rec_t *dst, uint8_t ch, bool *in_cds, uint64_t i)
+{
+        if (iscodingseq(fa, ch) && ch != 0) {
+                if (!*in_cds) {
+                        /*
+                         * transition from non-coding to coding
+                         * => create a new coding segment entry
+                         */
+                        dst->cdseg = realloc_array(dst->cdseg, FASTA_u64p, ++dst->cdseg_count);
+
+                        dst->cdseg[dst->cdseg_count - 1].a = i;
+                        dst->cdseg[dst->cdseg_count - 1].b = i;
+
+                        *in_cds = true;
+                }
+        } else {
+                if (*in_cds) {
+                        /*
+                         * transition from coding to non-coding
+                         * => finalize the current coding segment
+                         *    entry
+                         */
+                        assert(i > 0);
+                        assert(dst->cdseg_count > 0);
+
+                        dst->cdseg[dst->cdseg_count - 1].b = i - 1;
+                        *in_cds = false;
+                }
+        }
+}
+
+/**
+ * Read a variable line length sequence record into memory.
+ */
+static int __fasta_read2(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 {
 	size_t   alloc_size;
         uint8_t *buffer;
@@ -349,9 +407,12 @@ static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 
 	register uint32_t n;
 	register uint64_t i;
+        bool in_cds = false;
 
-	if (file_set_offset(fp, dst->seq_start) != 0) {
-		dP("Failed to seek to position %zu in %p\n", dst->seq_start, fp);
+        dP("read2\n");
+
+	if (file_set_offset(fa->fa_seqFP, dst->seq_start) != 0) {
+		dP("Failed to seek to position %zu in %p\n", dst->seq_start, fa->fa_seqFP);
 		return (-1);
 	}
 
@@ -374,18 +435,21 @@ static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 	buffer = alloc_array(uint8_t, FASTA_LINEBUFFER_SIZE);
 	buflen = FASTA_LINEBUFFER_SIZE;
 
+        dst->cdseg   = NULL;
+        dst->cdseg_count = 0;
+
 	for (; dst->seq_lines > 0;) {
 		/*
 		 * Read line into buffer
 		 */
-		buflen = fread(buffer, 1, buflen, fp);
+		buflen = fread(buffer, 1, buflen, fa->fa_seqFP);
 
 		if (buflen == 0) {
-			if (feof(fp) && dst->seq_lines < 2)
+			if (feof(fa->fa_seqFP) && dst->seq_lines < 2)
 				break;
 			else {
 				dP("An error occured during fread(%p, 1, %zu, %p): errno=%d, %s.\n",
-				   buffer, buflen, fp, errno, strerror(errno));
+				   buffer, buflen, fa->fa_seqFP, errno, strerror(errno));
 
 				free(buffer);
 				free(dst->seq_mem);
@@ -401,6 +465,9 @@ static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 		if (atr != NULL) {
 			for (n = 0; n < buflen; ++n) {
 				if (issequence(buffer[n])) {
+                                        if (dst->flags & FASTA_MAPCDSEG)
+                                                __fasta_cdseg_process(fa, dst, buffer[n], &in_cds, i);
+
 					atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
 				} else {
 					if (buffer[n] == '\n') {
@@ -429,6 +496,9 @@ static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 		} else {
 			for (n = 0; n < buflen; ++n) {
 				if (issequence(buffer[n])) {
+                                        if (dst->flags & FASTA_MAPCDSEG)
+                                                __fasta_cdseg_process(fa, dst, buffer[n], &in_cds, i);
+
 					((uint8_t *)(dst->seq_mem))[i++] = buffer[n];
 				} else {
 					if (buffer[n] == '\n') {
@@ -460,6 +530,9 @@ static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 	free(buffer);
 	dst->seq_len = i;
 
+        if (dst->flags & FASTA_MAPCDSEG)
+                __fasta_cdseg_process(fa, dst, 0, &in_cds, i);
+
 	if (dst->flags & FASTA_CSTRSEQ) {
 		dst->seq_mem[i] = '\0';
 		dst->seq_mem = realloc_array(dst->seq_mem, uint8_t, dst->seq_len + 1);
@@ -469,7 +542,10 @@ static int __fasta_read2(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 	return (0);
 }
 
-static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
+/**
+ * Read a equal line length sequence record into memory.
+ */
+static int __fasta_read1(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 {
 	size_t   alloc_size;
 	uint8_t *buffer;
@@ -477,9 +553,10 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 
 	register uint32_t l, n;
 	register uint64_t i;
+        bool in_cds = false;
 
-	if (file_set_offset(fp, dst->seq_start) != 0) {
-		dP("Failed to seek to position %zu in %p\n", dst->seq_start, fp);
+	if (file_set_offset(fa->fa_seqFP, dst->seq_start) != 0) {
+		dP("Failed to seek to position %zu in %p\n", dst->seq_start, fa->fa_seqFP);
 		return (-1);
 	}
 
@@ -497,6 +574,8 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 
 	i = 0;
 	dst->seq_mem = malloc(alloc_size);
+        dst->cdseg   = NULL;
+        dst->cdseg_count = 0;
 
 	if (atr != NULL) {
 		/*
@@ -512,7 +591,7 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 			/*
 			 * Read line into buffer
 			 */
-			if (fread(buffer, 1, buflen, fp) != buflen) {
+			if (fread(buffer, 1, buflen, fa->fa_seqFP) != buflen) {
 				/* fail */
 				free(buffer);
 				free(dst->seq_mem);
@@ -522,18 +601,22 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 			}
 
 			/*
-			 * Copy/Translate the buffer into seq_mem
+			 * Copy/Translate the buffer into seq_mem and/or map coding segments
 			 */
-			for (n = 0; n < buflen; ++n)
-				atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
+			for (n = 0; n < buflen; ++n) {
+                                if (dst->flags & FASTA_MAPCDSEG)
+                                        __fasta_cdseg_process(fa, dst, buffer[n], &in_cds, i);
 
-			getc_unlocked(fp); /* skip the new-line */
+				atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
+                        }
+
+			getc_unlocked(fa->fa_seqFP); /* skip the new-line */
 		}
 
 		buflen = dst->seq_lastw > 0 ? dst->seq_lastw : dst->seq_linew;
 		/* no need to reallocate the buffer since lastw < linew */
 
-		if (fread(buffer, 1, buflen, fp) != buflen) {
+		if (fread(buffer, 1, buflen, fa->fa_seqFP) != buflen) {
 			/* fail */
 			free(buffer);
 			free(dst->seq_mem);
@@ -542,8 +625,18 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 			return (-1);
 		}
 
-		for (n = 0; n < buflen; ++n)
+		for (n = 0; n < buflen; ++n) {
+                        if (dst->flags & FASTA_MAPCDSEG)
+                                __fasta_cdseg_process(fa, dst, buffer[n], &in_cds, i);
+
 			atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
+                }
+
+                /*
+                 * If there is an open coding segment, this call will finalize it.
+                 */
+                if (dst->flags & FASTA_MAPCDSEG)
+                        __fasta_cdseg_process(fa, dst, 0, &in_cds, i);
 
 		free(buffer);
 	} else {
@@ -557,7 +650,9 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 			/*
 			 * Read line into buffer
 			 */
-			if (fread(dst->seq_mem + i, 1, buflen, fp) != buflen) {
+                        dP("l = %u, i=%"PRIu64", buflen=%"PRIu64"\n", l, i, buflen);
+
+			if (fread(dst->seq_mem + i, 1, buflen, fa->fa_seqFP) != buflen) {
 				/* fail */
 				free(dst->seq_mem);
 				dst->seq_mem = NULL;
@@ -565,14 +660,18 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 				return (-1);
 			}
 
-			i += buflen;
+                        if (dst->flags & FASTA_MAPCDSEG) {
+                                for (n = 0; n < buflen; ++n, ++i)
+                                        __fasta_cdseg_process(fa, dst, dst->seq_mem[i], &in_cds, i);
+                        } else
+                                i += buflen;
 
-			getc_unlocked(fp); /* skip the new-line */
+			getc_unlocked(fa->fa_seqFP); /* skip the new-line */
 		}
 
 		buflen = dst->seq_lastw > 0 ? dst->seq_lastw : dst->seq_linew;
 
-		if (fread(dst->seq_mem + i, 1, buflen, fp) != buflen) {
+		if (fread(dst->seq_mem + i, 1, buflen, fa->fa_seqFP) != buflen) {
 			/* fail */
 			free(dst->seq_mem);
 			dst->seq_mem = NULL;
@@ -580,7 +679,17 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 			return (-1);
 		}
 
-		i += buflen;
+                if (dst->flags & FASTA_MAPCDSEG) {
+                        for (n = 0; n < buflen; ++n, ++i)
+                                __fasta_cdseg_process(fa, dst, dst->seq_mem[i], &in_cds, i);
+                } else
+                        i += buflen;
+
+                /*
+                 * If there is an open coding segment, this call will finalize it.
+                 */
+                if (dst->flags & FASTA_MAPCDSEG)
+                        __fasta_cdseg_process(fa, dst, 0, &in_cds, i);
 	}
 
 	if (dst->flags & FASTA_CSTRSEQ)
@@ -589,6 +698,9 @@ static int __fasta_read1(FILE *fp, FASTA_rec_t *dst, atrans_t *atr)
 	return (0);
 }
 
+/**
+ * Analyze a sequence record.
+ */
 static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t *atr)
 {
 	int      ch;
@@ -596,6 +708,8 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 	uint32_t clinew; /* current line width */
 
         (void)atr;
+
+        dP("read0\n");
 
 	assert(fp  != NULL);
 	assert(dst != NULL);
@@ -605,6 +719,8 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 	dst->hdr     = NULL;
 	dst->hdr_mem = NULL;
 	dst->seq_mem = NULL;
+        dst->cdseg   = NULL;
+        dst->cdseg_count = 0;
 	plinew = 0;
 	clinew = 0;
 
@@ -619,7 +735,10 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 		 * Analyze/Read the sequence
 		 */
 		if (options & FASTA_INMEMSEQ) {
-			/* in-memory */
+			/*
+                         * Not valid in this function
+                         */
+                        return (FASTA_EINVAL);
 		} else {
 			/*
 			 * Analyze the sequence without storing it into main memory.
@@ -702,12 +821,13 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 					case '\n':
 						if (linew_update /* && clinew > 0 */) {
 							if (clinew != plinew) {
-								linew_diff = true;
-
-								if (clinew == 0) {
+								if (linew_diff == true || clinew == 0) {
 									linew_update = false;
-									plinew  = 0;
+									plinew = 0;
+                                                                        clinew = 0;
 								}
+
+                                                                linew_diff = true;
 							} else {
 								plinew = clinew;
 								clinew = 0;
@@ -782,6 +902,9 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 	fa->fa_rindex  = 0;
 	fa->fa_rcount  = 0;
 	fa->fa_atr     = atr;
+        fa->fa_CDSmask = (uint32_t *)__SQ_mask;
+
+        fasta_setCDS(fa, options);
 
 	fa->fa_seqFP = fopen(path, "r");
 
@@ -790,6 +913,7 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 		goto fail;
 	}
 
+        setbuf(fa->fa_seqFP, NULL);
 	flockfile(fa->fa_seqFP);
 
 	if (file_get_stat(fa->fa_seqFP, &st) != 0) {
@@ -1002,6 +1126,45 @@ uint32_t fasta_count(FASTA *fa)
 	return (fa->fa_rcount);
 }
 
+int fasta_setCDS(FASTA *fa, uint32_t cds_flags)
+{
+        assert(fa != NULL);
+
+        if (cds_flags & FASTA_NASEQ)
+                fa->fa_CDSmask = (uint32_t *)__NA_CD_mask;
+        else if (cds_flags & FASTA_AASEQ)
+                fa->fa_CDSmask = (uint32_t *)__AA_CD_mask;
+
+        return (0);
+}
+
+int fasta_setCDS_string(FASTA *fa, const char *letters)
+{
+        size_t    l, i;
+        char     *s;
+        uint32_t  b, m, *mask = alloc_array(uint32_t, 8);
+
+        if (mask == NULL)
+                return (-1);
+
+        l = strlen(letters);
+
+	for (s = (char *)letters, i = 0; i < l; ++i) {
+		b = s[i] / (sizeof mask[0] * 8);
+		m = s[i] % (sizeof mask[0] * 8);
+		mask[b] |= 1 << m;
+	}
+
+        if (fa->fa_CDSmask != NULL && (fa->fa_options & FASTA_CDSFREEMASK))
+                free(fa->fa_CDSmask);
+
+        fa->fa_CDSmask  = mask;
+        fa->fa_options |= FASTA_CDSFREEMASK;
+
+        return (0);
+}
+
+
 FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *atr)
 {
 	FASTA_rec_t *farec;
@@ -1039,6 +1202,9 @@ FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *a
 		farec->flags = FASTA_REC_MAGICFL;
 	}
 
+	if (flags & FASTA_MAPCDSEG)
+		farec->flags |= FASTA_MAPCDSEG;
+
 	if (flags & FASTA_CSTRSEQ)
 		farec->flags |= FASTA_CSTRSEQ;
 
@@ -1049,7 +1215,7 @@ FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *a
 			/*
 			 * all the lines that form the sequence are of equal length
 			 */
-			if (__fasta_read1(fa->fa_seqFP, farec, atr) != 0) {
+			if (__fasta_read1(fa, farec, atr) != 0) {
 				/* fail */
 				fasta_rec_free(farec);
 				farec = NULL;
@@ -1059,7 +1225,7 @@ FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *a
 			/*
 			 * the lines have variable length, we have to look for new-lines
 			 */
-			if (__fasta_read2(fa->fa_seqFP, farec, atr) != 0) {
+			if (__fasta_read2(fa, farec, atr) != 0) {
 				/* fail */
 				fasta_rec_free(farec);
 				farec = NULL;
@@ -1109,6 +1275,72 @@ void fasta_rec_free(FASTA_rec_t *farec)
 	}
 
 	return;
+}
+
+FASTA_CDS_t *fasta_read_CDS(FASTA *fa, FASTA_rec_t *farec, FASTA_CDS_t *dst, uint32_t flags)
+{
+        (void)fa;
+        (void)flags;
+
+        if (farec->cdseg_count == 0 || farec->cdseg_index == farec->cdseg_count)
+                return (NULL);
+
+        if (dst == NULL) {
+                dst = alloc_type(FASTA_CDS_t);
+                dst->flags = FASTA_CDSFREEMASK;
+        }
+
+        dst->farec   = farec;
+        dst->seg_idx = farec->cdseg_index;
+        dst->seg_len = farec->cdseg[dst->seg_idx].b - farec->cdseg[dst->seg_idx].a + 1;
+        dst->seg_mem = farec->seq_mem + farec->cdseg[dst->seg_idx].a;
+
+        return (dst);
+}
+
+int fasta_rewind_CDS(FASTA *fa, FASTA_rec_t *farec)
+{
+        (void)fa;
+        farec->cdseg_index = 0;
+        return (0);
+}
+
+int fasta_seeko_CDS(FASTA *fa, FASTA_rec_t *farec, off_t off, int whence)
+{
+	off_t newpos;
+
+        (void)fa;
+	assert(fa != NULL);
+
+	switch (whence) {
+	case SEEK_SET:
+		newpos = off;
+		break;
+	case SEEK_CUR:
+		newpos = off + farec->cdseg_index;
+		break;
+	case SEEK_END:
+		newpos = farec->cdseg_count - off - 1;
+		break;
+	default:
+		errno = EINVAL;
+		return (-1);
+	}
+
+	if (newpos < 0 || newpos >= (off_t)farec->cdseg_count) {
+		errno = ERANGE;
+		return (-1);
+	}
+
+	farec->cdseg_index = (size_t) newpos;
+
+	return (0);
+}
+
+off_t fasta_tello_CDS(FASTA *fa, FASTA_rec_t *farec)
+{
+        (void)fa;
+        return (farec->cdseg_index);
 }
 
 int fasta_rewind(FASTA *fa)

@@ -24,6 +24,10 @@ extern "C" {
 #define FASTA_RAWREC        0x00000800 /**< Return a pointer to an internally allocated FASTA record */
 #define FASTA_CSTRSEQ       0x00001000 /**< Return the sequence as a C string (i.e. NUL terminated) */
 #define FASTA_CHKINDEX_FAIL 0x00002000 /**< Fail if the index is corrupted, regenerate otherwise */
+#define FASTA_MAPCDSEG      0x00004000 /**< Map coding segments */
+#define FASTA_NASEQ         0x00008000 /**< Prepare to read an NA sequence */
+#define FASTA_AASEQ         0x00010000 /**< Prepere to read an AA sequence */
+#define FASTA_CDSFREEMASK   0x00020000 /**< Free the fa_CDSmask pointer */
 
 #define FASTA_INDEX_EXT ".index" /**< filename.fa.index */
 
@@ -46,6 +50,14 @@ extern "C" {
                 SeqID_fmt_t seqid_fmt;
                 SeqID_t     seqid;
         } FASTA_rechdr_t;
+
+        /**
+         * Pair of 64b numbers
+         */
+        typedef struct {
+                uint64_t a;
+                uint64_t b;
+        } FASTA_u64p;
 
 #define FASTA_REC_MAGICFL 0xf0fa0000
 #define FASTA_REC_FREESEQ 0x00000001 /**< Allowed to free the sequence memory */
@@ -73,7 +85,19 @@ extern "C" {
                 uint32_t  seq_lastw; /**< last line width */
 
                 uint8_t  *seq_mem;  /**< in-memory sequence data */
+
+                FASTA_u64p *cdseg;  /**< coding segment boundaries */
+                size_t      cdseg_count; /**< number of coding segments in this record */
+                size_t      cdseg_index; /**< index of the next cdseg that will be returned by read_CDS */
         } FASTA_rec_t;
+
+        typedef struct {
+                uint32_t     flags;
+                FASTA_rec_t *farec;   /**< pointer to the associated FASTA record */
+                size_t       seg_idx; /**< coding segment index in the boundary array */
+                uint64_t     seg_len; /**< coding segment length */
+                uint8_t     *seg_mem; /**< pointer to the start of the coding segment */
+        } FASTA_CDS_t;
 
         typedef struct {
                 uint32_t fa_options;
@@ -87,13 +111,26 @@ extern "C" {
                 FASTA_rec_t *fa_record;
                 uint32_t     fa_rindex;
                 uint32_t     fa_rcount;
+
+                uint32_t    *fa_CDSmask;
         } FASTA;
 
         FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr);
         uint32_t fasta_count(FASTA *fa);
+
+        int fasta_setCDS(FASTA *fa, uint32_t cds_flags);
+        int fasta_setCDS_string(FASTA *fa, const char *letters);
+
         FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *atr);
         int fasta_write(FASTA *fa, FASTA_rec_t *farec);
         void fasta_rec_free(FASTA_rec_t *farec);
+
+        FASTA_CDS_t *fasta_read_CDS(FASTA *fa, FASTA_rec_t *farec, FASTA_CDS_t *dst, uint32_t flags);
+
+        int fasta_rewind_CDS(FASTA *fa, FASTA_rec_t *farec);
+        int fasta_seeko_CDS(FASTA *fa, FASTA_rec_t *farec, off_t off, int whence);
+        off_t fasta_tello_CDS(FASTA *fa, FASTA_rec_t *farec);
+
         int fasta_rewind(FASTA *fa);
         int fasta_seeko(FASTA *fa, off_t off, int whence);
         off_t fasta_tello(FASTA *fa);

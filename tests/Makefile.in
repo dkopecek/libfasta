@@ -35,7 +35,8 @@ build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS = T1_noidx_count$(EXEEXT) T2_noidx_read$(EXEEXT) \
 	T3_noidx_trans$(EXEEXT) T4_idx_read$(EXEEXT) \
-	T5_idx_count$(EXEEXT) fastacat$(EXEEXT) fastagen$(EXEEXT)
+	T5_idx_count$(EXEEXT) fastacat$(EXEEXT) fastagen$(EXEEXT) \
+	cdseg$(EXEEXT)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -72,6 +73,10 @@ am_T5_idx_count_OBJECTS = idx_count.$(OBJEXT)
 T5_idx_count_OBJECTS = $(am_T5_idx_count_OBJECTS)
 T5_idx_count_LDADD = $(LDADD)
 T5_idx_count_DEPENDENCIES = $(top_builddir)/src/libfasta-1.0.la
+am_cdseg_OBJECTS = cdseg.$(OBJEXT)
+cdseg_OBJECTS = $(am_cdseg_OBJECTS)
+cdseg_LDADD = $(LDADD)
+cdseg_DEPENDENCIES = $(top_builddir)/src/libfasta-1.0.la
 am_fastacat_OBJECTS = fastacat.$(OBJEXT)
 fastacat_OBJECTS = $(am_fastacat_OBJECTS)
 fastacat_LDADD = $(LDADD)
@@ -111,11 +116,11 @@ am__v_GEN_ = $(am__v_GEN_$(AM_DEFAULT_VERBOSITY))
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(T1_noidx_count_SOURCES) $(T2_noidx_read_SOURCES) \
 	$(T3_noidx_trans_SOURCES) $(T4_idx_read_SOURCES) \
-	$(T5_idx_count_SOURCES) $(fastacat_SOURCES) \
+	$(T5_idx_count_SOURCES) $(cdseg_SOURCES) $(fastacat_SOURCES) \
 	$(fastagen_SOURCES)
 DIST_SOURCES = $(T1_noidx_count_SOURCES) $(T2_noidx_read_SOURCES) \
 	$(T3_noidx_trans_SOURCES) $(T4_idx_read_SOURCES) \
-	$(T5_idx_count_SOURCES) $(fastacat_SOURCES) \
+	$(T5_idx_count_SOURCES) $(cdseg_SOURCES) $(fastacat_SOURCES) \
 	$(fastagen_SOURCES)
 ETAGS = etags
 CTAGS = ctags
@@ -236,10 +241,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-TESTS = T0.sh T1.sh T2.sh T3.sh T4.sh T5.sh T7.sh T6.sh
+TESTS = T0.sh T1.sh T2.sh T3.sh T4.sh T5.sh T7.sh T6.sh T8.sh
 AM_CPPFLAGS = -I$(top_srcdir)/src
 LDADD = $(top_builddir)/src/libfasta-1.0.la
-EXTRA_DIST = T0.sh T1.sh T2.sh T3.sh T4.sh T5.sh T6.sh T7.sh \
+EXTRA_DIST = T0.sh T1.sh T2.sh T3.sh T4.sh T5.sh T6.sh T7.sh T8.sh \
             data/multi.fa data/multi2.fa data/simple.fa data/bug0.fa
 
 T1_noidx_count_SOURCES = src/noidx_count.c
@@ -250,6 +255,7 @@ T5_idx_count_SOURCES = src/idx_count.c
 fastacat_SOURCES = src/fastacat.c
 fastagen_SOURCES = src/fastagen.c
 fastagen_CFLAGS = -D_BSD_SOURCE
+cdseg_SOURCES = src/cdseg.c
 DISTCLEANFILES = *.log *.out
 all: all-am
 
@@ -309,6 +315,9 @@ T4_idx_read$(EXEEXT): $(T4_idx_read_OBJECTS) $(T4_idx_read_DEPENDENCIES)
 T5_idx_count$(EXEEXT): $(T5_idx_count_OBJECTS) $(T5_idx_count_DEPENDENCIES) 
 	@rm -f T5_idx_count$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(T5_idx_count_OBJECTS) $(T5_idx_count_LDADD) $(LIBS)
+cdseg$(EXEEXT): $(cdseg_OBJECTS) $(cdseg_DEPENDENCIES) 
+	@rm -f cdseg$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(cdseg_OBJECTS) $(cdseg_LDADD) $(LIBS)
 fastacat$(EXEEXT): $(fastacat_OBJECTS) $(fastacat_DEPENDENCIES) 
 	@rm -f fastacat$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(fastacat_OBJECTS) $(fastacat_LDADD) $(LIBS)
@@ -322,6 +331,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdseg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fastacat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fastagen-fastagen.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/idx_count.Po@am__quote@
@@ -433,6 +443,22 @@ idx_count.obj: src/idx_count.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/idx_count.c' object='idx_count.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o idx_count.obj `if test -f 'src/idx_count.c'; then $(CYGPATH_W) 'src/idx_count.c'; else $(CYGPATH_W) '$(srcdir)/src/idx_count.c'; fi`
+
+cdseg.o: src/cdseg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdseg.o -MD -MP -MF $(DEPDIR)/cdseg.Tpo -c -o cdseg.o `test -f 'src/cdseg.c' || echo '$(srcdir)/'`src/cdseg.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/cdseg.Tpo $(DEPDIR)/cdseg.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/cdseg.c' object='cdseg.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdseg.o `test -f 'src/cdseg.c' || echo '$(srcdir)/'`src/cdseg.c
+
+cdseg.obj: src/cdseg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdseg.obj -MD -MP -MF $(DEPDIR)/cdseg.Tpo -c -o cdseg.obj `if test -f 'src/cdseg.c'; then $(CYGPATH_W) 'src/cdseg.c'; else $(CYGPATH_W) '$(srcdir)/src/cdseg.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/cdseg.Tpo $(DEPDIR)/cdseg.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/cdseg.c' object='cdseg.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdseg.obj `if test -f 'src/cdseg.c'; then $(CYGPATH_W) 'src/cdseg.c'; else $(CYGPATH_W) '$(srcdir)/src/cdseg.c'; fi`
 
 fastacat.o: src/fastacat.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fastacat.o -MD -MP -MF $(DEPDIR)/fastacat.Tpo -c -o fastacat.o `test -f 'src/fastacat.c' || echo '$(srcdir)/'`src/fastacat.c
