@@ -1295,6 +1295,8 @@ FASTA_CDS_t *fasta_read_CDS(FASTA *fa, FASTA_rec_t *farec, FASTA_CDS_t *dst, uin
         dst->seg_len = farec->cdseg[dst->seg_idx].b - farec->cdseg[dst->seg_idx].a + 1;
         dst->seg_mem = farec->seq_mem + farec->cdseg[dst->seg_idx].a;
 
+        ++farec->cdseg_index;
+
         return (dst);
 }
 
