@@ -721,6 +721,8 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 	dst->seq_mem = NULL;
         dst->cdseg   = NULL;
         dst->cdseg_count = 0;
+        dst->cdseg_index = 0;
+
 	plinew = 0;
 	clinew = 0;
 
