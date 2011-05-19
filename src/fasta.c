@@ -1271,6 +1271,9 @@ void fasta_rec_free(FASTA_rec_t *farec)
 		farec->flags  &= ~(FASTA_REC_FREESEQ);
 	}
 
+        if (farec->cdseg != NULL)
+                free(farec->cdseg);
+
 	if (farec->flags & FASTA_REC_FREEREC) {
 		farec->flags = 0;
 		free(farec);
@@ -1422,6 +1425,9 @@ void fasta_close(FASTA *fa)
 	}
 
 	free(fa->fa_path);
+
+        if (fa->fa_options & FASTA_CDSFREEMASK)
+                free(fa->fa_CDSmask);
 
 	if (fa->fa_seqFP != NULL)
 		fclose (fa->fa_seqFP);
