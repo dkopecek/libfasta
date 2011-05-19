@@ -437,6 +437,7 @@ static int __fasta_read2(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 
         dst->cdseg   = NULL;
         dst->cdseg_count = 0;
+        dst->cdseg_index = 0;
 
 	for (; dst->seq_lines > 0;) {
 		/*
@@ -576,6 +577,7 @@ static int __fasta_read1(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 	dst->seq_mem = malloc(alloc_size);
         dst->cdseg   = NULL;
         dst->cdseg_count = 0;
+        dst->cdseg_index = 0;
 
 	if (atr != NULL) {
 		/*
@@ -1263,6 +1265,7 @@ void fasta_rec_free(FASTA_rec_t *farec)
 		free(farec->hdr);
 		farec->hdr     = NULL;
 		farec->hdr_cnt = 0;
+		farec->flags  &= ~(FASTA_REC_FREEHDR);
 	}
 
 	if (farec->flags & FASTA_REC_FREESEQ) {
@@ -1287,8 +1290,37 @@ FASTA_CDS_t *fasta_read_CDS(FASTA *fa, FASTA_rec_t *farec, FASTA_CDS_t *dst, uin
         (void)fa;
         (void)flags;
 
-        if (farec->cdseg_count == 0 || farec->cdseg_index == farec->cdseg_count)
-                return (NULL);
+        if (farec->cdseg_count == 0 || farec->cdseg_index == farec->cdseg_count) {
+                if (farec->flags & FASTA_MAPCDSEG)
+                        return (NULL);
+                else {
+                        /*
+                         * CDS mapping is off, return the whole record.
+                         */
+                        if (farec->cdseg_index == 0) {
+                                if (dst == NULL) {
+                                        dst = alloc_type(FASTA_CDS_t);
+                                        dst->flags = FASTA_CDSFREEMASK;
+                                }
+
+                                dst->farec   = farec;
+                                dst->seg_idx = 0;
+                                dst->seg_len = farec->seq_len;
+                                dst->seg_mem = farec->seq_mem;
+
+                                farec->cdseg_count = 1;
+                                farec->cdseg_index = 1;
+
+                                return (dst);
+                        } else {
+                                /*
+                                 * CDS mapping is off and the whole record was already returned
+                                 * by a previous call to fasta_read_CDS (that sets cdseg_index to 1).
+                                 */
+                                return (NULL);
+                        }
+                }
+        }
 
         if (dst == NULL) {
                 dst = alloc_type(FASTA_CDS_t);
