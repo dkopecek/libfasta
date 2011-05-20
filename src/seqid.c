@@ -1,3 +1,30 @@
+/*
+ * Copyright 2011 Daniel Kopecek. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ *    1. Redistributions of source code must retain the above copyright notice, this list of
+ *       conditions and the following disclaimer.
+ *
+ *    2. Redistributions in binary form must reproduce the above copyright notice, this list
+ *       of conditions and the following disclaimer in the documentation and/or other materials
+ *       provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY Daniel Kopecek ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL Daniel Kopecek OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ * Author: Daniel Kopecek <xkopecek@fi.muni.cz>
+ *
+ */
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -6,6 +33,10 @@
 #include "helpers.h"
 #include "seqid.h"
 
+/**
+ * Determine wheter a given string contains only whitespace
+ * characters.
+ */
 static bool wspacep(char *s)
 {
 	while(*s != '\0')
@@ -13,6 +44,10 @@ static bool wspacep(char *s)
 			return (false);
 	return (true);
 }
+
+/*
+ * Format specific parsers called by the main parsing routine follow.
+ */
 
 static SeqID_fmt_t SeqID_gi_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
@@ -447,6 +482,12 @@ static SeqID_fmt_t SeqID_lcl_parse(char *buffer, size_t buflen, SeqID_t *dst)
 	return (SEQID_UNKNOWN);
 }
 
+/*
+ * This is the main parsing routine. Using the first field of a SeqID string
+ * determines which of the format specific parsers should be called to do the
+ * rest of the job. The buffer is modified during the executing but all
+ * modifications are undone before the function returns.
+ */
 SeqID_fmt_t SeqID_parse(char *buffer, size_t buflen, SeqID_t *dst)
 {
 	char  *btok;

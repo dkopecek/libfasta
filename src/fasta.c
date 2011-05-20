@@ -1,3 +1,30 @@
+/*
+ * Copyright 2011 Daniel Kopecek. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ *    1. Redistributions of source code must retain the above copyright notice, this list of
+ *       conditions and the following disclaimer.
+ *
+ *    2. Redistributions in binary form must reproduce the above copyright notice, this list
+ *       of conditions and the following disclaimer in the documentation and/or other materials
+ *       provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY Daniel Kopecek ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL Daniel Kopecek OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ * Author: Daniel Kopecek <xkopecek@fi.muni.cz>
+ *
+ */
 #include <stdio.h>
 #include <ctype.h>
 #include <stdbool.h>
@@ -162,7 +189,7 @@ static int __fahdr_read0(FILE *fp, FASTA_rec_t *dst)
 
 		buffer[dst->hdr_len++] = ch = getc_unlocked(fp);
 
-		if (ch == 0x01) /* ^A */
+		if (ch == 0x01) /* ^A server as a header separator in the FASTA format */
 			++dst->hdr_cnt;
 
 	} while(ch != '\n');
@@ -441,7 +468,7 @@ static int __fasta_read2(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 
 	for (; dst->seq_lines > 0;) {
 		/*
-		 * Read line into buffer
+		 * Read a line into buffer
 		 */
 		buflen = fread(buffer, 1, buflen, fa->fa_seqFP);
 
@@ -460,15 +487,21 @@ static int __fasta_read2(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 			}
 		}
 
-		/*
-		 * Copy/Translate the buffer into seq_mem
-		 */
 		if (atr != NULL) {
+                        /*
+                         * Read and translate the sequence
+                         */
 			for (n = 0; n < buflen; ++n) {
 				if (issequence(buffer[n])) {
+                                        /*
+                                         * Update CDS state
+                                         */
                                         if (dst->flags & FASTA_MAPCDSEG)
                                                 __fasta_cdseg_process(fa, dst, buffer[n], &in_cds, i);
 
+                                        /*
+                                         * Translate the buffer
+                                         */
 					atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
 				} else {
 					if (buffer[n] == '\n') {
@@ -495,6 +528,9 @@ static int __fasta_read2(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 				}
 			}
 		} else {
+                        /*
+                         * Read without translation
+                         */
 			for (n = 0; n < buflen; ++n) {
 				if (issequence(buffer[n])) {
                                         if (dst->flags & FASTA_MAPCDSEG)
@@ -606,9 +642,13 @@ static int __fasta_read1(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 			 * Copy/Translate the buffer into seq_mem and/or map coding segments
 			 */
 			for (n = 0; n < buflen; ++n) {
+                                /*
+                                 * Update CDS state
+                                 */
                                 if (dst->flags & FASTA_MAPCDSEG)
                                         __fasta_cdseg_process(fa, dst, buffer[n], &in_cds, i);
 
+                                /* translate the letter */
 				atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
                         }
 
@@ -628,9 +668,11 @@ static int __fasta_read1(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
 		}
 
 		for (n = 0; n < buflen; ++n) {
+                        /* Update CDS state */
                         if (dst->flags & FASTA_MAPCDSEG)
                                 __fasta_cdseg_process(fa, dst, buffer[n], &in_cds, i);
 
+                        /* translate the letter */
 			atrans_letter_s2d(atr, buffer[n], i++, (uint8_t *)dst->seq_mem);
                 }
 
@@ -694,6 +736,7 @@ static int __fasta_read1(FASTA *fa, FASTA_rec_t *dst, atrans_t *atr)
                         __fasta_cdseg_process(fa, dst, 0, &in_cds, i);
 	}
 
+        /* Add an extra \0 byte since a C string is requested */
 	if (dst->flags & FASTA_CSTRSEQ)
 		dst->seq_mem[alloc_size - 1] = '\0';
 
@@ -811,6 +854,9 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 				if (issequence(ch)) {
 					if (linew_update) {
 						if (linew_diff) {
+                                                        /*
+                                                         * The lines differ in width. Stop tracking line widths.
+                                                         */
 							clinew = 0;
 							plinew = 0;
 							linew_update = false;
@@ -825,6 +871,11 @@ static int __fasta_read0(FILE *fp, FASTA_rec_t *dst, uint32_t options, atrans_t 
 					case '\n':
 						if (linew_update /* && clinew > 0 */) {
 							if (clinew != plinew) {
+                                                                /*
+                                                                 * Current and previous line width. Set line_diff flag
+                                                                 * and continue. This may be the last line of the sequence
+                                                                 * and it is usually shorter.
+                                                                 */
 								if (linew_diff == true || clinew == 0) {
 									linew_update = false;
 									plinew = 0;
@@ -934,6 +985,9 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 
 		memset(&idxhdr, 0, sizeof (FASTA_idxhdr_t));
 
+                /*
+                 * Construct a filename of the index file
+                 */
 		if (strlen(path) + strlen(FASTA_INDEX_EXT) < (sizeof idx_path/sizeof(char))) {
 			strcpy(idx_path, path);
 			strcat(idx_path, FASTA_INDEX_EXT);
@@ -943,6 +997,9 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 			goto fail;
 		}
 
+                /*
+                 * Try to open the index file
+                 */
 		fa->fa_idxFP = fopen(idx_path,
 				     (options & FASTA_GENINDEX ? "r" : "r+"));
 
@@ -951,6 +1008,10 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 
 		flockfile(fa->fa_seqFP);
 
+                /*
+                 * Read the index header and perform simple integrity check
+                 * like filesize comparison.
+                 */
 		switch (__idxhdr_read0(fa, &idxhdr)) {
 		case 0:
 			break;
@@ -981,6 +1042,10 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 		if (options & FASTA_CHKINDEX_SLOW) {
 			/* slow check */
 		} else if (options & FASTA_CHKINDEX_FAST) {
+                        /*
+                         * Perform only check that don't take too much time and load
+                         * metadata for the records.
+                         */
 			register uint32_t i;
 			int r;
 
@@ -1086,6 +1151,10 @@ FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr)
 		fa->fa_rcount = i;
 		fa->fa_record = realloc_array(fa->fa_record, FASTA_rec_t, fa->fa_rcount);
 
+                /*
+                 * Save the index if the GENINDEX flag is set. This will create non-exising and
+                 * overwrite invalid index files.
+                 */
 		if ((fa->fa_options & FASTA_USEINDEX) && (fa->fa_options & FASTA_GENINDEX))
 			__index_write(fa, idx_path);
 	}
@@ -1154,6 +1223,7 @@ int fasta_setCDS_string(FASTA *fa, const char *letters)
         l = strlen(letters);
 
 	for (s = (char *)letters, i = 0; i < l; ++i) {
+                /* same as in genmask.c */
 		b = s[i] / (sizeof mask[0] * 8);
 		m = s[i] % (sizeof mask[0] * 8);
 		mask[b] |= 1 << m;

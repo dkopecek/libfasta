@@ -1,3 +1,30 @@
+/*
+ * Copyright 2011 Daniel Kopecek. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ *    1. Redistributions of source code must retain the above copyright notice, this list of
+ *       conditions and the following disclaimer.
+ *
+ *    2. Redistributions in binary form must reproduce the above copyright notice, this list
+ *       of conditions and the following disclaimer in the documentation and/or other materials
+ *       provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY Daniel Kopecek ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL Daniel Kopecek OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ * Author: Daniel Kopecek <xkopecek@fi.muni.cz>
+ *
+ */
 #ifndef FASTA_H
 #define FASTA_H
 
@@ -66,7 +93,7 @@ extern "C" {
 
         typedef struct {
                 uint32_t flags;
-                uint32_t chksum;
+                uint32_t chksum; /**< CRC32 checksum of the sequence */
 
                 FASTA_rechdr_t *hdr;     /**< parsed headers */
                 uint32_t        hdr_cnt; /**< number of headers */
@@ -101,40 +128,102 @@ extern "C" {
 
         typedef struct {
                 uint32_t fa_options;
-                char    *fa_path;
+                char    *fa_path; /**< path to the source file of this FASTA db */
 
-                FILE    *fa_seqFP;
-                FILE    *fa_idxFP;
+                FILE    *fa_seqFP; /**< FILE pointer of the data file */
+                FILE    *fa_idxFP; /**< FILE pointer of the index file */
 
-                atrans_t *fa_atr;
+                atrans_t *fa_atr; /**< global translation table, used if not specified when calling fasta_read() */
 
-                FASTA_rec_t *fa_record;
-                uint32_t     fa_rindex;
-                uint32_t     fa_rcount;
+                FASTA_rec_t *fa_record; /**< Array of FASTA record structures containg the metadata for each record */
+                uint32_t     fa_rindex; /**< Index of the next record that will be returned by fasta_read() */
+                uint32_t     fa_rcount; /**< Number of records */
 
-                uint32_t    *fa_CDSmask;
+                uint32_t    *fa_CDSmask; /**< A bitmap defining which letter are considered as coding */
         } FASTA;
 
+        /**
+         * Open a file with FASTA records. If `atr' is not NULL, then the sequence data
+         * will be translated using the given alphabet translation table.
+         */
         FASTA *fasta_open(const char *path, uint32_t options, atrans_t *atr);
+
+        /**
+         * Return the number of records in the given db.
+         */
         uint32_t fasta_count(FASTA *fa);
 
+        /**
+         * Set a default CDS mask.
+         */
         int fasta_setCDS(FASTA *fa, uint32_t cds_flags);
+
+        /**
+         * Set the characters in `letters' as the coding letters.
+         */
         int fasta_setCDS_string(FASTA *fa, const char *letters);
 
+        /**
+         * Read a record from the database. Using `atr' it is possible to override the
+         * translation table specified when calling the fasta_open() function.
+         */
         FASTA_rec_t *fasta_read(FASTA *fa, FASTA_rec_t *dst, uint32_t flags, atrans_t *atr);
+
+        /**
+         * Write the db to a file.
+         * XXX: not implemented yet
+         */
         int fasta_write(FASTA *fa, FASTA_rec_t *farec);
+
+        /**
+         * Free a record returned by fasta_read()
+         */
         void fasta_rec_free(FASTA_rec_t *farec);
 
+        /**
+         * Read a coding segment from the given record.
+         */
         FASTA_CDS_t *fasta_read_CDS(FASTA *fa, FASTA_rec_t *farec, FASTA_CDS_t *dst, uint32_t flags);
 
+        /**
+         * Rewind the next CDS index.
+         */
         int fasta_rewind_CDS(FASTA *fa, FASTA_rec_t *farec);
+
+        /**
+         * Set the next CDS index.
+         */
         int fasta_seeko_CDS(FASTA *fa, FASTA_rec_t *farec, off_t off, int whence);
+
+        /**
+         * Get the value of the CDS index.
+         */
         off_t fasta_tello_CDS(FASTA *fa, FASTA_rec_t *farec);
 
+        /**
+         * Rewind the next record index.
+         */
         int fasta_rewind(FASTA *fa);
+
+        /**
+         * Set the next record index.
+         */
         int fasta_seeko(FASTA *fa, off_t off, int whence);
+
+        /**
+         * Get the value of the next record index.
+         */
         off_t fasta_tello(FASTA *fa);
+
+        /**
+         * Apply a function to all record in the given db.
+         */
         void *fasta_apply(FASTA *fa, void * (*func)(FASTA_rec_t *, void *), uint32_t options, void *funcarg);
+
+        /**
+         * Close the given db, freeing all memory used to store information
+         * about it.
+         */
         void fasta_close(FASTA *fa);
 
 #ifdef __cplusplus
