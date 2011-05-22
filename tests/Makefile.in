@@ -36,7 +36,7 @@ host_triplet = @host@
 check_PROGRAMS = T1_noidx_count$(EXEEXT) T2_noidx_read$(EXEEXT) \
 	T3_noidx_trans$(EXEEXT) T4_idx_read$(EXEEXT) \
 	T5_idx_count$(EXEEXT) fastacat$(EXEEXT) fastagen$(EXEEXT) \
-	cdseg$(EXEEXT)
+	cdseg$(EXEEXT) fastaget$(EXEEXT)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -88,6 +88,10 @@ fastagen_DEPENDENCIES = $(top_builddir)/src/libfasta-1.0.la
 fastagen_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(fastagen_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_fastaget_OBJECTS = fastaget.$(OBJEXT)
+fastaget_OBJECTS = $(am_fastaget_OBJECTS)
+fastaget_LDADD = $(LDADD)
+fastaget_DEPENDENCIES = $(top_builddir)/src/libfasta-1.0.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -117,11 +121,11 @@ am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(T1_noidx_count_SOURCES) $(T2_noidx_read_SOURCES) \
 	$(T3_noidx_trans_SOURCES) $(T4_idx_read_SOURCES) \
 	$(T5_idx_count_SOURCES) $(cdseg_SOURCES) $(fastacat_SOURCES) \
-	$(fastagen_SOURCES)
+	$(fastagen_SOURCES) $(fastaget_SOURCES)
 DIST_SOURCES = $(T1_noidx_count_SOURCES) $(T2_noidx_read_SOURCES) \
 	$(T3_noidx_trans_SOURCES) $(T4_idx_read_SOURCES) \
 	$(T5_idx_count_SOURCES) $(cdseg_SOURCES) $(fastacat_SOURCES) \
-	$(fastagen_SOURCES)
+	$(fastagen_SOURCES) $(fastaget_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -253,6 +257,7 @@ T3_noidx_trans_SOURCES = src/noidx_trans.c
 T4_idx_read_SOURCES = src/idx_read.c
 T5_idx_count_SOURCES = src/idx_count.c
 fastacat_SOURCES = src/fastacat.c
+fastaget_SOURCES = src/fastaget.c
 fastagen_SOURCES = src/fastagen.c
 fastagen_CFLAGS = -D_BSD_SOURCE
 cdseg_SOURCES = src/cdseg.c
@@ -324,6 +329,9 @@ fastacat$(EXEEXT): $(fastacat_OBJECTS) $(fastacat_DEPENDENCIES)
 fastagen$(EXEEXT): $(fastagen_OBJECTS) $(fastagen_DEPENDENCIES) 
 	@rm -f fastagen$(EXEEXT)
 	$(AM_V_CCLD)$(fastagen_LINK) $(fastagen_OBJECTS) $(fastagen_LDADD) $(LIBS)
+fastaget$(EXEEXT): $(fastaget_OBJECTS) $(fastaget_DEPENDENCIES) 
+	@rm -f fastaget$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(fastaget_OBJECTS) $(fastaget_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -334,6 +342,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdseg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fastacat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fastagen-fastagen.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fastaget.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/idx_count.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/idx_read.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/noidx_count.Po@am__quote@
@@ -491,6 +500,22 @@ fastagen-fastagen.obj: src/fastagen.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/fastagen.c' object='fastagen-fastagen.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(fastagen_CFLAGS) $(CFLAGS) -c -o fastagen-fastagen.obj `if test -f 'src/fastagen.c'; then $(CYGPATH_W) 'src/fastagen.c'; else $(CYGPATH_W) '$(srcdir)/src/fastagen.c'; fi`
+
+fastaget.o: src/fastaget.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fastaget.o -MD -MP -MF $(DEPDIR)/fastaget.Tpo -c -o fastaget.o `test -f 'src/fastaget.c' || echo '$(srcdir)/'`src/fastaget.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fastaget.Tpo $(DEPDIR)/fastaget.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/fastaget.c' object='fastaget.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fastaget.o `test -f 'src/fastaget.c' || echo '$(srcdir)/'`src/fastaget.c
+
+fastaget.obj: src/fastaget.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fastaget.obj -MD -MP -MF $(DEPDIR)/fastaget.Tpo -c -o fastaget.obj `if test -f 'src/fastaget.c'; then $(CYGPATH_W) 'src/fastaget.c'; else $(CYGPATH_W) '$(srcdir)/src/fastaget.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/fastaget.Tpo $(DEPDIR)/fastaget.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/fastaget.c' object='fastaget.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fastaget.obj `if test -f 'src/fastaget.c'; then $(CYGPATH_W) 'src/fastaget.c'; else $(CYGPATH_W) '$(srcdir)/src/fastaget.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

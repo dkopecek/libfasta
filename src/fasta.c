@@ -178,6 +178,10 @@ static int __fahdr_read0(FILE *fp, FASTA_rec_t *dst)
 	dst->hdr_len   = 0;
 	dst->hdr_cnt   = 1;
 
+        dst->cdseg = NULL;
+        dst->cdseg_count = 0;
+        dst->cdseg_index = 0;
+
 	buflen = 1024;
 	buffer = alloc_array(char, buflen);
 
