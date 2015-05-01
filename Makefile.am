@@ -3,4 +3,4 @@ ACLOCAL_AMFLAGS= -I m4
 SUBDIRS=src tests
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libfasta-1.0.pc
+pkgconfig_DATA = libfasta.pc

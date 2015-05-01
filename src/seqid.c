@@ -25,6 +25,8 @@
  * Author: Daniel Kopecek <xkopecek@fi.muni.cz>
  *
  */
+#define _DEFAULT_SOURCE
+#include <config.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>

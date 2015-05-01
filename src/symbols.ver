@@ -1,0 +1,8 @@
+{
+  global:
+	fasta_*;
+	atrans_*;
+	SeqID_*;
+  local:
+	*;
+};

@@ -26,6 +26,7 @@
  *
  */
 #define _XOPEN_SOURCE /* for fileno */
+#include <config.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>

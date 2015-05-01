@@ -46,6 +46,7 @@
    Network licensing program, please visit www.openinventionnetwork.com
    <http://www.openinventionnetwork.com>.  */
 
+#include <config.h>
 #include <stdint.h>
 #include "crc32.h"
 

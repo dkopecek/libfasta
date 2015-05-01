@@ -8,10 +8,8 @@
 int main(int argc, char *argv[])
 {
         FILE *fp;
-	FASTA       *fa;
+	FASTA *fa;
 	FASTA_rec_t *farec;
-
-        size_t begin, end;
 
         char *line;
         size_t llen;

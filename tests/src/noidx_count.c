@@ -1,12 +1,12 @@
+#include <config.h>
 #include <stdio.h>
 #include <fasta.h>
 #include <libgen.h>
 
 int main(int argc, char *argv[])
 {
-	FASTA       *fa;
-	FASTA_rec_t *farec;
-
+	FASTA *fa;
+	
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s <fasta-file>\n", basename(argv[0]));
 		return (1);

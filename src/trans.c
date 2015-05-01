@@ -25,6 +25,7 @@
  * Author: Daniel Kopecek <xkopecek@fi.muni.cz>
  *
  */
+#include <config.h>
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
